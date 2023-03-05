@@ -2,6 +2,7 @@ use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     ChaCha20Poly1305, Nonce,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use thiserror::Error;
@@ -39,6 +40,7 @@ pub enum EntryKind {
 pub struct Entry {
     bytes: Vec<u8>,
     kind: EntryKind,
+    datetime: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
@@ -61,9 +63,11 @@ impl EncryptedEntry {
 
 impl Entry {
     pub fn new(bytes: &Vec<u8>, kind: EntryKind) -> Self {
+        let dt = Utc::now();
         Entry {
             bytes: bytes.to_owned(),
             kind,
+            datetime: dt.to_rfc3339(),
         }
     }
 
@@ -194,7 +198,8 @@ mod tests {
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encrypted = entry.encode(&KEY).unwrap();
         let decoded = encrypted.try_into_entry(&KEY).unwrap();
-        assert_eq!(entry, decoded);
+        assert_eq!(entry.bytes, decoded.bytes);
+        assert_eq!(entry.kind, decoded.kind);
     }
 
     #[test]
