@@ -52,7 +52,7 @@ pub struct EncryptedEntry {
 impl EncryptedEntry {
     pub fn try_into_entry(self) -> Result<Entry, EntryError> {
         let cipher = ChaCha20Poly1305::new(KEY.into());
-        let nonce = Nonce::clone_from_slice(&self.nonce[0..16]);
+        let nonce = Nonce::clone_from_slice(&self.nonce[0..12]);
         let plaintext = cipher
             .decrypt(&nonce, self.ciphertext.as_ref())
             .map_err(|e| EntryError::Decode(e.to_string()))?;
@@ -169,9 +169,75 @@ impl<R: Read, W: Write> Clipboard<R, W> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::fs::{File, OpenOptions};
+
+    fn new_file(content: &str) -> File {
+        let tmp_file = temp_file::with_contents(content.as_bytes());
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(tmp_file.path())
+            .unwrap()
+    }
+
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    fn can_encode_and_decode_entry() {
+        let bytes = vec![1, 2, 3, 4];
+        let entry = Entry::new(&bytes, EntryKind::Text);
+        let encrypted = entry.encode().unwrap();
+        let decoded = encrypted.try_into_entry().unwrap();
+        assert_eq!(entry, decoded);
+    }
+
+    #[test]
+    fn can_add_entry() {
+        let f = new_file("");
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        assert_eq!(clipboard.entries.len(), 0);
+        clipboard
+            .add_entry(Entry::new(&vec![], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries.len(), 1);
+    }
+
+    #[test]
+    fn can_remove_entry_from_clipboard() {
+        let f = new_file("");
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        clipboard
+            .add_entry(Entry::new(&vec![], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries.len(), 1);
+        clipboard.remove_entry(0).unwrap();
+        assert_eq!(clipboard.entries.len(), 0);
+    }
+
+    #[test]
+    fn removes_entries_over_max() {
+        let f = new_file("");
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        clipboard.max_entries = 1;
+        clipboard
+            .add_entry(Entry::new(&vec![1], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries.len(), 1);
+        clipboard
+            .add_entry(Entry::new(&vec![2], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries.len(), 1);
+        assert_eq!(clipboard.entries[0].bytes, vec![2]);
+    }
+
+    #[test]
+    fn load_works() {
+        let bytes = vec![1, 2, 3, 4];
+        let entry = Entry::new(&bytes, EntryKind::Text);
+        let encoded = entry.encode().unwrap();
+        let json_s = serde_json::to_string(&vec![encoded]).unwrap();
+        let f = new_file(&json_s);
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        clipboard.load().unwrap();
+        assert_eq!(clipboard.entries.len(), 1);
     }
 }
