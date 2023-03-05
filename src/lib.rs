@@ -18,7 +18,7 @@ pub enum EntryError {
     Encode(String),
     #[error("Could not serialize entry: {}", ".0")]
     CantSerialize(String),
-    #[error("Invalid operation", ".0")]
+    #[error("Invalid operation: {}", ".0")]
     InvalidOperation(String),
     #[error("unknown data store error: {}", ".0")]
     Unknown(String),
@@ -89,8 +89,6 @@ pub struct Clipboard<R: Read, W: Write> {
     writer: BufWriter<W>,
     /// Clipboard entries. Stored as a vector because I am uncreative
     entries: Vec<Entry>,
-    /// Index of the entries vector
-    selected_entry_idx: usize,
     /// How many entries are allowed in the Clipboard
     /// A new copy will always force the oldest from the clipboard
     max_entries: usize,
@@ -102,7 +100,6 @@ impl<R: Read, W: Write> Clipboard<R, W> {
             reader,
             writer,
             entries: vec![],
-            selected_entry_idx: 0,
             max_entries: DEFAULT_MAX_ENTRIES,
         }
     }
@@ -167,5 +164,14 @@ impl<R: Read, W: Write> Clipboard<R, W> {
             .entries
             .drain((self.entries.len() - self.max_entries)..)
             .collect();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
