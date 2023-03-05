@@ -7,8 +7,7 @@ use std::io::{self, BufReader, BufWriter, Read, Write};
 use thiserror::Error;
 
 const DEFAULT_MAX_ENTRIES: usize = 100;
-// TODO: Set this another way, perhaps generate upon first running?
-const KEY: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
+type Key = [u8; 32];
 
 #[derive(Error, Debug)]
 pub enum EntryError {
@@ -50,8 +49,8 @@ pub struct EncryptedEntry {
 }
 
 impl EncryptedEntry {
-    pub fn try_into_entry(self) -> Result<Entry, EntryError> {
-        let cipher = ChaCha20Poly1305::new(KEY.into());
+    pub fn try_into_entry(self, key: &Key) -> Result<Entry, EntryError> {
+        let cipher = ChaCha20Poly1305::new(key.into());
         let nonce = Nonce::clone_from_slice(&self.nonce[0..12]);
         let plaintext = cipher
             .decrypt(&nonce, self.ciphertext.as_ref())
@@ -68,8 +67,8 @@ impl Entry {
         }
     }
 
-    pub fn encode(&self) -> Result<EncryptedEntry, EntryError> {
-        let cipher = ChaCha20Poly1305::new(KEY.into());
+    pub fn encode(&self, key: &Key) -> Result<EncryptedEntry, EntryError> {
+        let cipher = ChaCha20Poly1305::new(key.into());
         let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
         let ciphertext = cipher
             .encrypt(&nonce, self.bytes.as_ref())
@@ -82,7 +81,7 @@ impl Entry {
     }
 }
 
-pub struct Clipboard<R: Read, W: Write> {
+pub struct Clipboard<'a, R: Read, W: Write> {
     /// Used to load the entries into memory. I.E. a file
     reader: BufReader<R>,
     /// Used to persist the entries. I.E. a file
@@ -92,15 +91,17 @@ pub struct Clipboard<R: Read, W: Write> {
     /// How many entries are allowed in the Clipboard
     /// A new copy will always force the oldest from the clipboard
     max_entries: usize,
+    key: &'a Key,
 }
 
-impl<R: Read, W: Write> Clipboard<R, W> {
-    pub fn new(reader: BufReader<R>, writer: BufWriter<W>) -> Self {
+impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
+    pub fn new(reader: BufReader<R>, writer: BufWriter<W>, key: &'a Key) -> Self {
         Clipboard {
             reader,
             writer,
             entries: vec![],
             max_entries: DEFAULT_MAX_ENTRIES,
+            key,
         }
     }
 
@@ -110,7 +111,7 @@ impl<R: Read, W: Write> Clipboard<R, W> {
             .entries
             .clone()
             .into_iter()
-            .map(|entry| entry.encode())
+            .map(|entry| entry.encode(self.key))
             .collect();
         let serialized = serde_json::to_vec(&encoded.unwrap())
             .map_err(|e| EntryError::CantSerialize(e.to_string()))?;
@@ -126,7 +127,7 @@ impl<R: Read, W: Write> Clipboard<R, W> {
             .map_err(|e| EntryError::Decode(e.to_string()))?;
         self.entries = decoded
             .into_iter()
-            .map(|encrypted| encrypted.try_into_entry())
+            .map(|encrypted| encrypted.try_into_entry(self.key))
             .collect::<Result<Vec<Entry>, EntryError>>()?;
 
         Ok(())
@@ -172,6 +173,8 @@ mod tests {
     use super::*;
     use std::fs::{File, OpenOptions};
 
+    const KEY: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
+
     fn new_file(content: &str) -> File {
         let tmp_file = temp_file::with_contents(content.as_bytes());
         OpenOptions::new()
@@ -185,15 +188,15 @@ mod tests {
     fn can_encode_and_decode_entry() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
-        let encrypted = entry.encode().unwrap();
-        let decoded = encrypted.try_into_entry().unwrap();
+        let encrypted = entry.encode(&KEY).unwrap();
+        let decoded = encrypted.try_into_entry(&KEY).unwrap();
         assert_eq!(entry, decoded);
     }
 
     #[test]
     fn can_add_entry() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
         assert_eq!(clipboard.entries.len(), 0);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
@@ -204,7 +207,7 @@ mod tests {
     #[test]
     fn can_remove_entry_from_clipboard() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
             .unwrap();
@@ -216,7 +219,7 @@ mod tests {
     #[test]
     fn removes_entries_over_max() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
         clipboard.max_entries = 1;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -233,10 +236,10 @@ mod tests {
     fn load_works() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
-        let encoded = entry.encode().unwrap();
+        let encoded = entry.encode(&KEY).unwrap();
         let json_s = serde_json::to_string(&vec![encoded]).unwrap();
         let f = new_file(&json_s);
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f));
+        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
         clipboard.load().unwrap();
         assert_eq!(clipboard.entries.len(), 1);
     }
