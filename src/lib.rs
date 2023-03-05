@@ -105,6 +105,10 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
         }
     }
 
+    pub fn generate_encryption_key() -> Key {
+        ChaCha20Poly1305::generate_key(&mut OsRng).into()
+    }
+
     /// Persists current Clipboard to the Writer
     pub fn save(&mut self) -> Result<(), EntryError> {
         let encoded: Result<Vec<EncryptedEntry>, EntryError> = self
