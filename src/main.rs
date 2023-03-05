@@ -1,5 +1,7 @@
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
+use tiled_clipboard::clipboard::Clipboard;
+use tiled_clipboard::config::Config;
 
 const APPLICATION_ID: &str = "com.github.aburd.tiled-clipboard-manager";
 

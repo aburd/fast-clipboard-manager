@@ -1038,6 +1038,7 @@ dependencies = [
  "clipboard",
  "clipboard-master",
  "gtk",
+ "log",
  "serde",
  "serde_json",
  "temp-file",
