@@ -8,7 +8,7 @@ use std::io::{self, BufReader, BufWriter, Read, Write};
 use thiserror::Error;
 
 const DEFAULT_MAX_ENTRIES: usize = 100;
-type Key = [u8; 32];
+pub type Key = [u8; 32];
 
 #[derive(Error, Debug)]
 pub enum EntryError {
@@ -98,6 +98,10 @@ pub struct Clipboard<'a, R: Read, W: Write> {
     key: &'a Key,
 }
 
+pub fn generate_encryption_key() -> Key {
+    ChaCha20Poly1305::generate_key(&mut OsRng).into()
+}
+
 impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
     pub fn new(reader: BufReader<R>, writer: BufWriter<W>, key: &'a Key) -> Self {
         Clipboard {
@@ -107,10 +111,6 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
             max_entries: DEFAULT_MAX_ENTRIES,
             key,
         }
-    }
-
-    pub fn generate_encryption_key() -> Key {
-        ChaCha20Poly1305::generate_key(&mut OsRng).into()
     }
 
     /// Persists current Clipboard to the Writer
