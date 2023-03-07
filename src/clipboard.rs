@@ -3,6 +3,7 @@ use chacha20poly1305::{
     ChaCha20Poly1305, Nonce,
 };
 use chrono::Utc;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use thiserror::Error;
@@ -131,6 +132,12 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
     pub fn load(&mut self) -> Result<(), EntryError> {
         let mut buf = String::new();
         self.reader.read_to_string(&mut buf)?;
+        if buf.is_empty() {
+            info!("initializing new empty clipboard");
+            buf = serde_json::to_string::<Vec<Entry>>(&self.entries)
+                .map_err(|e| EntryError::Decode(e.to_string()))?;
+            self.save()?;
+        }
         let decoded = serde_json::from_str::<Vec<EncryptedEntry>>(&buf)
             .map_err(|e| EntryError::Decode(e.to_string()))?;
         self.entries = decoded
