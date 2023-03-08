@@ -1,33 +1,11 @@
 use clipboard_master::Master;
-use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow};
 use log::info;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use tiled_clipboard::clipboard::{self, Clipboard};
+use tiled_clipboard::clipboard;
 use tiled_clipboard::config;
-use tiled_clipboard::os_clipboard_handler::OsClipboardHandler;
-
-const APPLICATION_ID: &str = "com.github.aburd.tiled-clipboard-manager";
-
-fn build_app(clipboard: Clipboard) -> Application {
-    let app = Application::builder()
-        .application_id(APPLICATION_ID)
-        .build();
-
-    app.connect_activate(|app| {
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .default_width(320)
-            .default_height(320)
-            .modal(true)
-            .decorated(false)
-            .build();
-
-        window.show_all();
-    });
-    app
-}
+use tiled_clipboard::os_clipboard::OsClipboard;
+use tiled_clipboard::ui;
 
 fn main() {
     env_logger::init();
@@ -36,10 +14,21 @@ fn main() {
     let config = config::get_config().unwrap();
     let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
     let clipboard_cm = Arc::clone(&clipboard);
+    let clipboard_app = Arc::clone(&clipboard);
+    let mut handles = vec![];
 
-    let handle = thread::spawn(move || {
-        let _ = Master::new(OsClipboardHandler::new(clipboard_cm)).run();
+    let clipboard_master_handle = thread::spawn(move || {
+        Master::new(OsClipboard::new(clipboard_cm)).run().unwrap();
     });
+    handles.push(clipboard_master_handle);
 
-    handle.join().unwrap();
+    let gtk_handle = thread::spawn(move || {
+        let exit_code = ui::build_and_run_gtk_app(clipboard_app);
+        info!("Exited GTK app with exit code: {:?}", exit_code);
+    });
+    handles.push(gtk_handle);
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
