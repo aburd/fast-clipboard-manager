@@ -7,11 +7,12 @@ use chrono::Utc;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-const DEFAULT_MAX_ENTRIES: usize = 100;
+const DEFAULT_MAX_ENTRIES: usize = 15;
 
 pub type Key = [u8; 32];
 
@@ -90,6 +91,23 @@ impl Entry {
     }
 }
 
+impl fmt::Display for Entry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            EntryKind::Text => {
+                write!(
+                    f,
+                    "Entry: {}",
+                    String::from_utf8(self.bytes.clone()).unwrap()
+                )
+            }
+            EntryKind::Image => {
+                write!(f, "[{}] ENTRY[IMAGE]: {:?}", self.datetime, self.bytes)
+            }
+        }
+    }
+}
+
 pub struct Clipboard {
     storage: File,
     /// Clipboard entries. Stored as a vector because I am uncreative
@@ -122,7 +140,6 @@ impl Clipboard {
             .into_iter()
             .map(|entry| entry.encode(&self.key))
             .collect();
-        info!("encoded: {:?}", encoded);
         let serialized = serde_json::to_string(&encoded.unwrap())
             .map_err(|e| EntryError::CantSerialize(e.to_string()))?;
 

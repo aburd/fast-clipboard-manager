@@ -1,9 +1,12 @@
 use clipboard_master::Master;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
-use log::{error, info};
+use log::info;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use tiled_clipboard::clipboard::{self, Clipboard};
 use tiled_clipboard::config;
+use tiled_clipboard::os_clipboard_handler::OsClipboardHandler;
 
 const APPLICATION_ID: &str = "com.github.aburd.tiled-clipboard-manager";
 
@@ -22,8 +25,6 @@ fn build_app(clipboard: Clipboard) -> Application {
             .build();
 
         window.show_all();
-        info!("Starting clipboard master");
-        info!("Polling...");
     });
     app
 }
@@ -33,14 +34,12 @@ fn main() {
 
     info!("Starting tiled clipboard...");
     let config = config::get_config().unwrap();
-    match clipboard::get_clipboard(&config) {
-        Ok(clipboard) => {
-            let _ = Master::new(clipboard).run();
-            // let app = build_app(clipboard);
-            // app.run();
-        }
-        Err(e) => {
-            error!("Couldn't get clipboard: {}", e);
-        }
-    }
+    let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
+    let clipboard_cm = Arc::clone(&clipboard);
+
+    let handle = thread::spawn(move || {
+        let _ = Master::new(OsClipboardHandler::new(clipboard_cm)).run();
+    });
+
+    handle.join().unwrap();
 }
