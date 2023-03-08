@@ -12,7 +12,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-const DEFAULT_MAX_ENTRIES: usize = 15;
+const DEFAULT_MAX_ENTRIES: usize = 6;
 
 pub type Key = [u8; 32];
 
@@ -201,6 +201,16 @@ impl Clipboard {
         self.entries.remove(idx);
         self.save()?;
         Ok(())
+    }
+
+    pub fn entries_text(&self) -> String {
+        let keys = vec!["a", "s", "d", "f", "g", "h"];
+        self.list_entries()
+            .iter()
+            .enumerate()
+            .map(|(i, entry)| format!("{}.\n {}", keys.get(i).unwrap(), entry))
+            .collect::<Vec<String>>()
+            .join("\n\n")
     }
 
     fn clip_entries_to_max_size(&mut self) {
