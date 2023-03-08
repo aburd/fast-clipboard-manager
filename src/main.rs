@@ -1,34 +1,11 @@
-use log::{error, info};
-use std::error::Error;
-use std::fs::OpenOptions;
-
 use clipboard_master::Master;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
-use tiled_clipboard::clipboard::Clipboard;
-use tiled_clipboard::config::Config;
+use log::{error, info};
+use tiled_clipboard::clipboard::{self, Clipboard};
+use tiled_clipboard::config;
 
 const APPLICATION_ID: &str = "com.github.aburd.tiled-clipboard-manager";
-
-fn get_config() -> Result<Config, Box<dyn Error>> {
-    let home_path = home::home_dir().unwrap();
-    let dir_path = home_path.join(".config/titled_clipboard");
-    Config::load(dir_path)
-}
-
-fn get_clipboard(config: &Config) -> Result<Clipboard, Box<dyn Error>> {
-    let storage = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(&config.config_dir.join("entries.json"))
-        .unwrap();
-    // TODO: setup key gracefully
-    let key: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
-    let mut clipboard = Clipboard::new(storage, key.to_owned());
-    clipboard.load()?;
-    Ok(clipboard)
-}
 
 fn build_app(clipboard: Clipboard) -> Application {
     let app = Application::builder()
@@ -51,13 +28,12 @@ fn build_app(clipboard: Clipboard) -> Application {
     app
 }
 
-// fn main() -> Result<(), Box<dyn Error>> {
 fn main() {
     env_logger::init();
 
     info!("Starting tiled clipboard...");
-    let config = get_config().unwrap();
-    match get_clipboard(&config) {
+    let config = config::get_config().unwrap();
+    match clipboard::get_clipboard(&config) {
         Ok(clipboard) => {
             let _ = Master::new(clipboard).run();
             // let app = build_app(clipboard);

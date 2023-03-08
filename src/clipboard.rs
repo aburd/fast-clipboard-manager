@@ -1,3 +1,4 @@
+use crate::config::Config;
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     ChaCha20Poly1305, Nonce,
@@ -5,7 +6,8 @@ use chacha20poly1305::{
 use chrono::Utc;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::error::Error;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
@@ -190,6 +192,20 @@ impl Clipboard {
             .drain((self.entries.len() - self.max_entries)..)
             .collect();
     }
+}
+
+pub fn get_clipboard(config: &Config) -> Result<Clipboard, Box<dyn Error>> {
+    let storage = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&config.config_dir.join("entries.json"))
+        .unwrap();
+    // TODO: setup key gracefully
+    let key: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
+    let mut clipboard = Clipboard::new(storage, key.to_owned());
+    clipboard.load()?;
+    Ok(clipboard)
 }
 
 #[cfg(test)]
