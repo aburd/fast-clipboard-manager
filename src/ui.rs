@@ -10,6 +10,7 @@ use gtk::{Application, ApplicationWindow};
 use log::info;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct AppError {}
@@ -63,5 +64,5 @@ fn build_ui(app: &gtk::Application) {
     };
 
     // executes the closure once every second
-    glib::timeout_add_seconds_local(1, tick);
+    glib::timeout_add_local(Duration::from_millis(100), tick);
 }
