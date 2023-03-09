@@ -1,7 +1,9 @@
 # fast-clipboard-manager
 
 A clipboard manager designed for use in a tiled window manager, like i3 or sway.
-Although not complete necessary to be used in that context, this manager in designed to be FAST and minimal and is aimed at users who never want to take their hands off the keyboard.
+
+Aimed at users who never want to take their hands off the keyboard, this manager in designed to be FAST, minimal.
+
 Inspired by projects like kickoff and rofi.
 
 ## Design Goals
