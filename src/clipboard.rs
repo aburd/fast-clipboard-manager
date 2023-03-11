@@ -89,6 +89,10 @@ impl Entry {
             kind: self.kind,
         })
     }
+
+    pub fn content(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 impl fmt::Display for Entry {
@@ -203,16 +207,6 @@ impl Clipboard {
         Ok(())
     }
 
-    pub fn entries_text(&self) -> String {
-        let keys = vec!["a", "s", "d", "f", "g", "h"];
-        self.list_entries()
-            .iter()
-            .enumerate()
-            .map(|(i, entry)| format!("{}.\n {}", keys.get(i).unwrap(), entry))
-            .collect::<Vec<String>>()
-            .join("\n\n")
-    }
-
     fn clip_entries_to_max_size(&mut self) {
         self.entries = self
             .entries
@@ -255,8 +249,8 @@ mod tests {
     fn can_encode_and_decode_entry() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
-        let encrypted = entry.encode(&KEY).unwrap();
-        let decoded = encrypted.try_into_entry(&KEY).unwrap();
+        let encrypted = entry.encode(KEY).unwrap();
+        let decoded = encrypted.try_into_entry(KEY).unwrap();
         assert_eq!(entry.bytes, decoded.bytes);
         assert_eq!(entry.kind, decoded.kind);
     }
@@ -264,7 +258,7 @@ mod tests {
     #[test]
     fn can_add_entry() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, &KEY);
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
         assert_eq!(clipboard.entries.len(), 0);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
@@ -275,7 +269,7 @@ mod tests {
     #[test]
     fn can_remove_entry_from_clipboard() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, &KEY);
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
             .unwrap();
@@ -287,7 +281,7 @@ mod tests {
     #[test]
     fn removes_entries_over_max() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, &KEY);
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -304,10 +298,10 @@ mod tests {
     fn load_works() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
-        let encoded = entry.encode(&KEY).unwrap();
+        let encoded = entry.encode(KEY).unwrap();
         let json_s = serde_json::to_string(&vec![encoded]).unwrap();
         let f = new_file(&json_s);
-        let mut clipboard = Clipboard::new(f, &KEY);
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
         clipboard.load().unwrap();
         assert_eq!(clipboard.entries.len(), 1);
     }

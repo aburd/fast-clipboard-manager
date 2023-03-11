@@ -5,8 +5,8 @@ use crate::{
 };
 use clipboard_master::Master;
 use gtk::gdk::Display;
-use gtk::glib;
 use gtk::prelude::*;
+use gtk::{gio, glib};
 use gtk::{Application, CssProvider, StyleContext};
 use gtk4 as gtk;
 use log::info;
@@ -28,7 +28,31 @@ pub fn build_app() -> Result<Application, AppError> {
     Ok(app)
 }
 
-fn build_ui(app: &gtk::Application) {
+fn build_entry(index: usize, cb_entry: &clipboard::Entry) -> ClipboardEntry {
+    let keys = vec!["a", "s", "d", "f", "g", "h"];
+    let key = keys.get(index % keys.len()).unwrap();
+    let index_text = format!("{}:", key);
+    let entry = ClipboardEntry::new();
+    entry.set_entry_info(&index_text, &cb_entry.content());
+    entry
+}
+
+fn render_app(clipboard: &Arc<Mutex<clipboard::Clipboard>>) -> gtk::Box {
+    let app_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    for (i, e) in clipboard
+        .lock()
+        .unwrap()
+        .list_entries()
+        .into_iter()
+        .enumerate()
+    {
+        let entry = build_entry(i, e);
+        app_box.append(&entry);
+    }
+    app_box
+}
+
+fn setup_css() {
     // The CSS "magic" happens here.
     let provider = CssProvider::new();
     provider.load_from_data(include_str!("styles.css"));
@@ -39,6 +63,10 @@ fn build_ui(app: &gtk::Application) {
         &provider,
         gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
+}
+
+fn build_ui(app: &gtk::Application) {
+    setup_css();
 
     let window = Window::new(&app);
 
@@ -47,18 +75,15 @@ fn build_ui(app: &gtk::Application) {
     let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
     let clipboard_cm = Arc::clone(&clipboard);
 
-    let body = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    let title = gtk::Label::new(None);
-    title.set_text("Clipboard");
-    let label = gtk::Label::new(None);
-    label.set_text(&clipboard.lock().unwrap().entries_text());
-    let entry = ClipboardEntry::new();
+    let mut app_box = render_app(&clipboard);
 
-    body.append(&title);
-    body.append(&label);
-    body.append(&entry);
-    window.set_child(Some(&body));
+    let scrolled_window = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never) // Disable horizontal scrolling
+        .min_content_width(360)
+        .build();
+    scrolled_window.set_child(Some(&app_box));
 
+    window.set_child(Some(&scrolled_window));
     window.show();
 
     thread::spawn(move || {
@@ -67,7 +92,8 @@ fn build_ui(app: &gtk::Application) {
 
     // we are using a closure to capture the label (else we could also use a normal function)
     let tick = move || {
-        label.set_text(&clipboard.lock().unwrap().entries_text());
+        app_box = render_app(&clipboard);
+        scrolled_window.set_child(Some(&app_box));
         // we could return glib::Continue(false) to stop our clock after this tick
         glib::Continue(true)
     };

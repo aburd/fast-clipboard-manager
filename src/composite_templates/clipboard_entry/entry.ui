@@ -6,7 +6,7 @@
       <class name="fc-clipboard-entry" />
     </style>
     <child>
-      <object class="GtkLabel">
+      <object class="GtkLabel" id="index_text">
         <property name="label">a:</property>
         <style>
           <class name="entry-index" />
@@ -18,7 +18,7 @@
       </object>
     </child>
     <child>
-      <object class="GtkLabel">
+      <object class="GtkLabel" id="content_text">
         <property name="label">test text****</property>
         <style>
           <class name="entry-index" />

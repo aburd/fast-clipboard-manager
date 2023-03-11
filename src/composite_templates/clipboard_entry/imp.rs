@@ -5,7 +5,12 @@ use gtk4 as gtk;
 
 #[derive(CompositeTemplate, Default)]
 #[template(file = "entry.ui")]
-pub struct ClipboardEntry;
+pub struct ClipboardEntry {
+    #[template_child]
+    pub index_text: TemplateChild<gtk::Label>,
+    #[template_child]
+    pub content_text: TemplateChild<gtk::Label>,
+}
 
 // The central trait for subclassing a GObject
 #[glib::object_subclass]

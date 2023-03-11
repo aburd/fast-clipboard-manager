@@ -1,14 +1,15 @@
-use fast_clipboard::ui;
-use fast_clipboard::ui::AppError;
+use fast_clipboard::app;
+use fast_clipboard::app_copy;
 use gtk::glib::ExitCode;
 use gtk::prelude::*;
 use gtk4 as gtk;
 use log::{error, info};
 
-fn run() -> Result<ExitCode, AppError> {
+fn run() -> Result<ExitCode, app_copy::AppError> {
     info!("building gtk window");
-    let app = ui::build_app()?;
-    let exit_code = app.run();
+    // let application = app::build_app()?;
+    let application = app_copy::build_app()?;
+    let exit_code = application.run();
     Ok(exit_code)
 }
 

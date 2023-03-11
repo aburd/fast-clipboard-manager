@@ -1,5 +1,5 @@
-use glib::Object;
 use gtk::glib;
+use gtk::subclass::prelude::*;
 use gtk4 as gtk;
 
 mod imp;
@@ -13,7 +13,13 @@ glib::wrapper! {
 
 impl ClipboardEntry {
     pub fn new() -> Self {
-        Object::builder().build()
+        glib::Object::builder().build()
+    }
+
+    pub fn set_entry_info(&self, index_text: &str, content_text: &str) {
+        let imp = self.imp();
+        imp.index_text.set_text(index_text);
+        imp.content_text.set_text(content_text);
     }
 }
 
