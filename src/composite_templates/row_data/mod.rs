@@ -18,8 +18,9 @@ glib::wrapper! {
 // Constructor for new instances. This simply calls glib::Object::new() with
 // initial values for our two properties and then returns the new instance
 impl RowData {
-    pub fn new(content: &str, date: &str) -> RowData {
+    pub fn new(index: &str, content: &str, date: &str) -> RowData {
         glib::Object::builder()
+            .property("index", index)
             .property("content", content)
             .property("date", date)
             .build()

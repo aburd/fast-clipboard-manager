@@ -12,6 +12,8 @@ use std::cell::RefCell;
 #[properties(wrapper_type = super::RowData)]
 pub struct RowData {
     #[property(get, set)]
+    index: RefCell<Option<String>>,
+    #[property(get, set)]
     content: RefCell<Option<String>>,
     #[property(get, set)]
     date: RefCell<Option<String>>,

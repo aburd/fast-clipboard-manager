@@ -1,4 +1,3 @@
-use fast_clipboard::app;
 use fast_clipboard::app_copy;
 use gtk::glib::ExitCode;
 use gtk::prelude::*;
@@ -7,7 +6,6 @@ use log::{error, info};
 
 fn run() -> Result<ExitCode, app_copy::AppError> {
     info!("building gtk window");
-    // let application = app::build_app()?;
     let application = app_copy::build_app()?;
     let exit_code = application.run();
     Ok(exit_code)

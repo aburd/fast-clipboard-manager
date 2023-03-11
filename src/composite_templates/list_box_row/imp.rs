@@ -4,7 +4,6 @@ use gtk::{
     glib::{self, clone, ParamSpec, Properties, Value},
     prelude::*,
     subclass::prelude::*,
-    ResponseType,
 };
 use gtk4 as gtk;
 
@@ -60,61 +59,12 @@ impl ObjectImpl for ListBoxRow {
             .sync_create()
             .build();
         hbox.append(&label);
-        let date = gtk::Label::new(None);
-        item.bind_property("date", &date, "value")
+        let label = gtk::Label::new(None);
+        item.bind_property("date", &label, "label")
             .sync_create()
-            .bidirectional()
             .build();
-        hbox.append(&date);
-
-        // When the edit button is clicked, a new modal dialog is created for editing
-        // the corresponding row
-        let edit_button = gtk::Button::with_label("Edit");
-        edit_button.connect_clicked(clone!(@weak item, @weak obj => move |_| {
-            let parent_window = obj.root().and_downcast::<gtk::Window>();
-            let dialog = gtk::Dialog::with_buttons(
-                Some("Edit Item"),
-                parent_window.as_ref(),
-                gtk::DialogFlags::MODAL,
-                &[("Close", ResponseType::Close)],
-            );
-            dialog.set_default_response(ResponseType::Close);
-            dialog.connect_response(|dialog, _| dialog.close());
-
-            let content_area = dialog.content_area();
-
-            // Similarly to the label and spin button inside the listbox, the text entry
-            // and spin button in the edit dialog are connected via property bindings to
-            // the item. Any changes will be immediately reflected inside the item and
-            // by the listbox
-            let entry = gtk::Entry::new();
-            item.bind_property("name", &entry, "text")
-                .sync_create().bidirectional()
-                .build();
-
-            // Activating the entry (enter) will send response `ResponseType::Close` to the dialog
-            entry.connect_activate(clone!(@weak dialog => move |_| {
-                dialog.response(ResponseType::Close);
-            }));
-            content_area.append(&entry);
-
-            let spin_button = gtk::SpinButton::with_range(0.0, 100.0, 1.0);
-            item.bind_property("count", &spin_button, "value")
-                .sync_create().bidirectional()
-                .build();
-            content_area.append(&spin_button);
-
-            dialog.show()
-        }));
-        hbox.append(&edit_button);
-
+        hbox.append(&label);
         obj.set_child(Some(&hbox));
-
-        // When a row is activated (select + enter) we simply emit the clicked
-        // signal on the corresponding edit button to open the edit dialog
-        obj.connect_activate(clone!(@weak edit_button => move |_| {
-            edit_button.emit_clicked();
-        }));
     }
 }
 

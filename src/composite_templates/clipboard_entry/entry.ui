@@ -21,10 +21,22 @@
       <object class="GtkLabel" id="content_text">
         <property name="label">test text****</property>
         <style>
-          <class name="entry-index" />
+          <class name="entry-text" />
         </style>
         <layout>
           <property name="column">1</property>
+          <property name="row">0</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="date_text">
+        <property name="label"></property>
+        <style>
+          <class name="entry-date" />
+        </style>
+        <layout>
+          <property name="column">2</property>
           <property name="row">0</property>
         </layout>
       </object>

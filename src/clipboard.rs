@@ -46,7 +46,7 @@ pub enum EntryKind {
 pub struct Entry {
     bytes: Vec<u8>,
     kind: EntryKind,
-    datetime: String,
+    pub datetime: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
@@ -177,7 +177,7 @@ impl Clipboard {
     }
 
     /// idx will wrap to length of entries in Clipboard
-    pub fn get_entry(&mut self, idx: usize) -> &Entry {
+    pub fn get_entry(&self, idx: usize) -> &Entry {
         &self.entries[idx % self.entries.len()]
     }
 
@@ -187,9 +187,13 @@ impl Clipboard {
 
     /// Clips off any entries at beginning
     pub fn add_entry(&mut self, entry: Entry) -> Result<(), EntryError> {
-        self.entries.push(entry);
-        if self.entries.len() > self.max_entries {
-            self.clip_entries_to_max_size();
+        if let Some(idx) = self.entries.iter().position(|e| e.bytes == entry.bytes) {
+            self.entries.swap(0, idx);
+        } else {
+            self.entries.insert(0, entry);
+            if self.entries.len() > self.max_entries {
+                self.clip_entries_to_max_size();
+            }
         }
         self.save()?;
         Ok(())

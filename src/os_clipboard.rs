@@ -25,7 +25,6 @@ impl ClipboardHandler for OsClipboard {
         clipboard
             .add_entry(new_entry)
             .expect("Could not add entry to clipboard");
-        clipboard.save().unwrap();
 
         info!("saved copied value as new entry into clipboard");
         debug!(

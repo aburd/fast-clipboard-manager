@@ -1,4 +1,3 @@
-pub mod app;
 pub mod app_copy;
 pub mod clipboard;
 pub mod composite_templates;

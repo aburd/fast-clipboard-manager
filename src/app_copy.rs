@@ -1,15 +1,36 @@
-use crate::composite_templates::{list_box_row, model, row_data};
+use crate::{
+    clipboard,
+    composite_templates::{model, row_data, ClipboardEntry, Window},
+    config, os_clipboard, OsClipboard,
+};
+use clipboard_master::Master;
 use gtk::{
+    gdk::{Display, Event, Key},
     glib::{self, clone},
     prelude::*,
-    ResponseType,
+    CssProvider, EventControllerKey, StyleContext,
 };
 use gtk4 as gtk;
-use list_box_row::ListBoxRow;
+use log::{debug, info};
 use row_data::RowData;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 #[derive(Debug)]
 pub struct AppError {}
+
+fn setup_css() {
+    // The CSS "magic" happens here.
+    let provider = CssProvider::new();
+    provider.load_from_data(include_str!("styles.css"));
+    // We give the CssProvided to the default screen so the CSS rules we added
+    // can be applied to our window.
+    StyleContext::add_provider_for_display(
+        &Display::default().expect("Could not connect to a display."),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+}
 
 pub fn build_app() -> Result<gtk::Application, AppError> {
     let app = gtk::Application::builder()
@@ -23,12 +44,14 @@ pub fn build_app() -> Result<gtk::Application, AppError> {
 }
 
 fn build_ui(application: &gtk::Application) {
-    let window = gtk::ApplicationWindow::builder()
-        .default_width(320)
-        .default_height(480)
-        .application(application)
-        .title("Custom Model")
-        .build();
+    setup_css();
+
+    info!("Starting fast clipboard...");
+    let config = config::get_config().unwrap();
+    let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
+    let clipboard_cm = Arc::clone(&clipboard);
+
+    let window = Window::new(&application);
 
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 5);
 
@@ -48,7 +71,7 @@ fn build_ui(application: &gtk::Application) {
     listbox.bind_model(
         Some(&model),
         clone!(@weak window => @default-panic, move |item| {
-            ListBoxRow::new(
+            ClipboardEntry ::new(
                 item.downcast_ref::<RowData>()
                     .expect("RowData is of wrong type"),
             )
@@ -56,38 +79,96 @@ fn build_ui(application: &gtk::Application) {
         }),
     );
 
+    let controller = EventControllerKey::builder()
+        .name("my-event-controller-key")
+        .build();
+
+    controller.connect_key_pressed(
+        clone!(@weak listbox, @weak clipboard => @default-return gtk::Inhibit(false), move |_, key, n, _mod_type| {
+            match key {
+                Key::Return => {
+                    let selected = listbox.selected_row();
+
+                    if let Some(selected) = selected {
+                        let idx = selected.index();
+                        let clipboard = clipboard.lock().unwrap();
+                        let entry = clipboard.get_entry(idx as usize);
+                        os_clipboard::set_content(&entry.content());
+                    }
+                    gtk::Inhibit(true)
+                },
+                Key::a  => {
+                    let clipboard = clipboard.lock().unwrap();
+                    let entry = clipboard.get_entry(0);
+                    os_clipboard::set_content(&entry.content());
+                    gtk::Inhibit(true)
+                },
+                Key::s  => {
+                    let clipboard = clipboard.lock().unwrap();
+                    let entry = clipboard.get_entry(1);
+                    os_clipboard::set_content(&entry.content());
+                    gtk::Inhibit(true)
+                },
+                Key::d  => {
+                    let clipboard = clipboard.lock().unwrap();
+                    let entry = clipboard.get_entry(2);
+                    os_clipboard::set_content(&entry.content());
+                    gtk::Inhibit(true)
+                },
+                Key::f  => {
+                    let clipboard = clipboard.lock().unwrap();
+                    let entry = clipboard.get_entry(3);
+                    os_clipboard::set_content(&entry.content());
+                    gtk::Inhibit(true)
+                },
+                Key::g  => {
+                    let clipboard = clipboard.lock().unwrap();
+                    let entry = clipboard.get_entry(4);
+                    os_clipboard::set_content(&entry.content());
+                    gtk::Inhibit(true)
+                },
+                Key::j => {
+                    let selected = listbox.selected_row();
+                    debug!("selected is {:?}", selected);
+
+                    if let Some(selected) = selected {
+                        let idx = selected.index() + 1;
+                        debug!("index is {}", idx);
+                        let row = listbox.row_at_index(idx);
+                        listbox.select_row(row.as_ref());
+                    }
+                    gtk::Inhibit(false)
+                }
+                _ => {
+                    debug!("Key pressed: {:?}", key);
+                    gtk::Inhibit(false)
+                }
+            }
+        }),
+    );
+    listbox.add_controller(controller);
+
     let scrolled_window = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never) // Disable horizontal scrolling
         .min_content_height(480)
         .min_content_width(360)
         .build();
-
     scrolled_window.set_child(Some(&listbox));
-
-    let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-
-    // Via the delete button we delete the item from the model that
-    // is at the index of the selected row. Also deleting from the
-    // model is immediately reflected in the listbox.
-    let delete_button = gtk::Button::with_label("Delete");
-    delete_button.connect_clicked(clone!(@weak model, @weak listbox => move |_| {
-        let selected = listbox.selected_row();
-
-        if let Some(selected) = selected {
-            let idx = selected.index();
-            model.remove(idx as u32);
-        }
-    }));
-    hbox.append(&delete_button);
-
-    vbox.append(&hbox);
     vbox.append(&scrolled_window);
 
     window.set_child(Some(&vbox));
 
-    for i in 0..10 {
-        model.append(&RowData::new(&format!("Name {i}"), "blah"));
+    for (i, entry) in clipboard.lock().unwrap().list_entries().iter().enumerate() {
+        model.append(&RowData::new(
+            &i.to_string(),
+            &entry.content(),
+            &entry.datetime,
+        ));
     }
+
+    thread::spawn(move || {
+        Master::new(OsClipboard::new(clipboard_cm)).run().unwrap();
+    });
 
     window.show();
 }
