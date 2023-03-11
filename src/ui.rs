@@ -1,12 +1,13 @@
-use crate::clipboard;
-use crate::config;
-use crate::os_clipboard::OsClipboard;
-use crate::APPLICATION_ID;
+use crate::{
+    clipboard,
+    composite_templates::{ClipboardEntry, Window},
+    config, OsClipboard, APPLICATION_ID,
+};
 use clipboard_master::Master;
 use gtk::gdk::Display;
 use gtk::glib;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, CssProvider, StyleContext};
+use gtk::{Application, CssProvider, StyleContext};
 use gtk4 as gtk;
 use log::info;
 use std::sync::{Arc, Mutex};
@@ -39,16 +40,7 @@ fn build_ui(app: &gtk::Application) {
         gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-    let window = ApplicationWindow::builder()
-        .application(app)
-        .default_width(720)
-        .default_height(420)
-        .modal(true)
-        .decorated(false)
-        .build();
-
-    window.set_title(Some("Fast Clipboard"));
-    window.set_default_size(260, 40);
+    let window = Window::new(&app);
 
     info!("Starting fast clipboard...");
     let config = config::get_config().unwrap();
@@ -60,9 +52,11 @@ fn build_ui(app: &gtk::Application) {
     title.set_text("Clipboard");
     let label = gtk::Label::new(None);
     label.set_text(&clipboard.lock().unwrap().entries_text());
+    let entry = ClipboardEntry::new();
 
     body.append(&title);
     body.append(&label);
+    body.append(&entry);
     window.set_child(Some(&body));
 
     window.show();

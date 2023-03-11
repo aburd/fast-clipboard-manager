@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<interface>
-  <template class="application_window" parent="GtkApplicationWindow">
-    <property name="title">Fast Clipboard Manager</property>
-</interface>

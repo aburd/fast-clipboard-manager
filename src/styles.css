@@ -1,3 +1,8 @@
-window {
+.fc-window {
   border-radius: 20px;
+}
+.fc-clipboard-entry {
+  border-radius: 20px;
+  border: 1px solid black;
+  margin: 10px;
 }
