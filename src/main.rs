@@ -1,8 +1,8 @@
+use fast_clipboard::ui;
+use fast_clipboard::ui::AppError;
 use gtk::glib::ExitCode;
 use gtk::prelude::*;
 use log::{error, info};
-use tiled_clipboard::ui;
-use tiled_clipboard::ui::AppError;
 
 fn run() -> Result<ExitCode, AppError> {
     info!("building gtk window");

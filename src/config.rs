@@ -78,6 +78,6 @@ impl Config {
 
 pub fn get_config() -> Result<Config, Box<dyn Error>> {
     let home_path = home::home_dir().unwrap();
-    let dir_path = home_path.join(".config/titled_clipboard");
+    let dir_path = home_path.join(".config/fast_clipboard_manager");
     Config::load(dir_path)
 }

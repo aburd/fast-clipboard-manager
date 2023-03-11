@@ -40,7 +40,7 @@ fn build_ui(app: &gtk::Application) {
     window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(260, 40);
 
-    info!("Starting tiled clipboard...");
+    info!("Starting fast clipboard...");
     let config = config::get_config().unwrap();
     let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
     let clipboard_cm = Arc::clone(&clipboard);

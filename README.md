@@ -1,6 +1,6 @@
 # fast-clipboard-manager
 
-A clipboard manager designed for use in a tiled window manager, like i3 or sway.
+A clipboard manager designed for use in a fast window manager, like i3 or sway.
 
 Aimed at users who never want to take their hands off the keyboard, this manager in designed to be FAST, minimal.
 

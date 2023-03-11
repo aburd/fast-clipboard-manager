@@ -3,4 +3,4 @@ pub mod config;
 pub mod os_clipboard;
 pub mod ui;
 
-pub const APPLICATION_ID: &str = "com.github.aburd.tiled-clipboard-manager";
+pub const APPLICATION_ID: &str = "com.github.aburd.fast-clipboard-manager";
