@@ -2,6 +2,7 @@ use fast_clipboard::ui;
 use fast_clipboard::ui::AppError;
 use gtk::glib::ExitCode;
 use gtk::prelude::*;
+use gtk4 as gtk;
 use log::{error, info};
 
 fn run() -> Result<ExitCode, AppError> {

@@ -7,6 +7,7 @@ use clipboard_master::Master;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
+use gtk4 as gtk;
 use log::info;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -35,9 +36,7 @@ fn build_ui(app: &gtk::Application) {
         .decorated(false)
         .build();
 
-    window.set_title("First GTK+ Clock");
-    window.set_border_width(10);
-    window.set_position(gtk::WindowPosition::Center);
+    window.set_title(Some("Fast Clipboard"));
     window.set_default_size(260, 40);
 
     info!("Starting fast clipboard...");
@@ -48,9 +47,9 @@ fn build_ui(app: &gtk::Application) {
     let label = gtk::Label::new(None);
     label.set_text(&clipboard.lock().unwrap().entries_text());
 
-    window.add(&label);
+    window.set_child(Some(&label));
 
-    window.show_all();
+    window.show();
 
     thread::spawn(move || {
         Master::new(OsClipboard::new(clipboard_cm)).run().unwrap();
