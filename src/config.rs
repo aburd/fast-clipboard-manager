@@ -1,4 +1,4 @@
-use super::clipboard::Key;
+use crate::clipboard::Key;
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -74,4 +74,10 @@ impl Config {
             key_path: None,
         }
     }
+}
+
+pub fn get_config() -> Result<Config, Box<dyn Error>> {
+    let home_path = home::home_dir().unwrap();
+    let dir_path = home_path.join(".config/fast_clipboard_manager");
+    Config::load(dir_path)
 }

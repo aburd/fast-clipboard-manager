@@ -1,27 +1,32 @@
+use crate::config::Config;
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     ChaCha20Poly1305, Nonce,
 };
 use chrono::Utc;
-use log::info;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::error::Error;
+use std::fmt;
+use std::fs::{File, OpenOptions};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-const DEFAULT_MAX_ENTRIES: usize = 100;
+const DEFAULT_MAX_ENTRIES: usize = 6;
+
 pub type Key = [u8; 32];
 
 #[derive(Error, Debug)]
 pub enum EntryError {
-    #[error("error decoding the entry: {}", ".0")]
+    #[error("error decoding the entry: {0}")]
     Decode(String),
-    #[error("error encoding the entry: {}", ".0")]
+    #[error("error encoding the entry: {0}")]
     Encode(String),
-    #[error("Could not serialize entry: {}", ".0")]
+    #[error("Could not serialize entry: {0}")]
     CantSerialize(String),
-    #[error("Invalid operation: {}", ".0")]
+    #[error("Invalid operation: {0}")]
     InvalidOperation(String),
-    #[error("unknown data store error: {}", ".0")]
+    #[error("unknown data store error: {0}")]
     Unknown(String),
 }
 
@@ -86,28 +91,41 @@ impl Entry {
     }
 }
 
-pub struct Clipboard<'a, R: Read, W: Write> {
-    /// Used to load the entries into memory. I.E. a file
-    reader: BufReader<R>,
-    /// Used to persist the entries. I.E. a file
-    writer: BufWriter<W>,
+impl fmt::Display for Entry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            EntryKind::Text => {
+                write!(
+                    f,
+                    "Entry: {}",
+                    String::from_utf8(self.bytes.clone()).unwrap()
+                )
+            }
+            EntryKind::Image => {
+                write!(f, "[{}] ENTRY[IMAGE]: {:?}", self.datetime, self.bytes)
+            }
+        }
+    }
+}
+
+pub struct Clipboard {
+    storage: File,
     /// Clipboard entries. Stored as a vector because I am uncreative
     entries: Vec<Entry>,
     /// How many entries are allowed in the Clipboard
     /// A new copy will always force the oldest from the clipboard
     max_entries: usize,
-    key: &'a Key,
+    key: Key,
 }
 
 pub fn generate_encryption_key() -> Key {
     ChaCha20Poly1305::generate_key(&mut OsRng).into()
 }
 
-impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
-    pub fn new(reader: BufReader<R>, writer: BufWriter<W>, key: &'a Key) -> Self {
+impl Clipboard {
+    pub fn new(storage: File, key: Key) -> Self {
         Clipboard {
-            reader,
-            writer,
+            storage,
             entries: vec![],
             max_entries: DEFAULT_MAX_ENTRIES,
             key,
@@ -120,18 +138,23 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
             .entries
             .clone()
             .into_iter()
-            .map(|entry| entry.encode(self.key))
+            .map(|entry| entry.encode(&self.key))
             .collect();
-        let serialized = serde_json::to_vec(&encoded.unwrap())
+        let serialized = serde_json::to_string(&encoded.unwrap())
             .map_err(|e| EntryError::CantSerialize(e.to_string()))?;
-        self.writer.write_all(&serialized)?;
+
+        self.storage.set_len(0)?;
+        self.storage.seek(SeekFrom::Start(0))?;
+        self.storage.write_all(&serialized.as_bytes())?;
+        self.storage.flush()?;
         Ok(())
     }
 
     /// Loads all from Reader into current Clipboard
     pub fn load(&mut self) -> Result<(), EntryError> {
         let mut buf = String::new();
-        self.reader.read_to_string(&mut buf)?;
+        self.storage.read_to_string(&mut buf)?;
+        debug!("load buf: [{}]", buf);
         if buf.is_empty() {
             info!("initializing new empty clipboard");
             buf = serde_json::to_string::<Vec<Entry>>(&self.entries)
@@ -139,18 +162,23 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
             self.save()?;
         }
         let decoded = serde_json::from_str::<Vec<EncryptedEntry>>(&buf)
-            .map_err(|e| EntryError::Decode(e.to_string()))?;
+            .map_err(|e| EntryError::Decode(format!("serde: {}", e.to_string())))?;
         self.entries = decoded
             .into_iter()
-            .map(|encrypted| encrypted.try_into_entry(self.key))
+            .map(|encrypted| encrypted.try_into_entry(&self.key))
             .collect::<Result<Vec<Entry>, EntryError>>()?;
 
+        debug!("loaded {} clipboard entries", self.entries.len());
         Ok(())
     }
 
     /// idx will wrap to length of entries in Clipboard
     pub fn get_entry(&mut self, idx: usize) -> &Entry {
         &self.entries[idx % self.entries.len()]
+    }
+
+    pub fn list_entries(&self) -> &[Entry] {
+        &self.entries
     }
 
     /// Clips off any entries at beginning
@@ -175,12 +203,36 @@ impl<'a, R: Read, W: Write> Clipboard<'a, R, W> {
         Ok(())
     }
 
+    pub fn entries_text(&self) -> String {
+        let keys = vec!["a", "s", "d", "f", "g", "h"];
+        self.list_entries()
+            .iter()
+            .enumerate()
+            .map(|(i, entry)| format!("{}.\n {}", keys.get(i).unwrap(), entry))
+            .collect::<Vec<String>>()
+            .join("\n\n")
+    }
+
     fn clip_entries_to_max_size(&mut self) {
         self.entries = self
             .entries
             .drain((self.entries.len() - self.max_entries)..)
             .collect();
     }
+}
+
+pub fn get_clipboard(config: &Config) -> Result<Clipboard, Box<dyn Error>> {
+    let storage = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&config.config_dir.join("entries.json"))
+        .unwrap();
+    // TODO: setup key gracefully
+    let key: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
+    let mut clipboard = Clipboard::new(storage, key.to_owned());
+    clipboard.load()?;
+    Ok(clipboard)
 }
 
 #[cfg(test)]
@@ -212,7 +264,7 @@ mod tests {
     #[test]
     fn can_add_entry() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
+        let mut clipboard = Clipboard::new(f, &KEY);
         assert_eq!(clipboard.entries.len(), 0);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
@@ -223,7 +275,7 @@ mod tests {
     #[test]
     fn can_remove_entry_from_clipboard() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
+        let mut clipboard = Clipboard::new(f, &KEY);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
             .unwrap();
@@ -235,7 +287,7 @@ mod tests {
     #[test]
     fn removes_entries_over_max() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
+        let mut clipboard = Clipboard::new(f, &KEY);
         clipboard.max_entries = 1;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -255,7 +307,7 @@ mod tests {
         let encoded = entry.encode(&KEY).unwrap();
         let json_s = serde_json::to_string(&vec![encoded]).unwrap();
         let f = new_file(&json_s);
-        let mut clipboard = Clipboard::new(BufReader::new(&f), BufWriter::new(&f), &KEY);
+        let mut clipboard = Clipboard::new(f, &KEY);
         clipboard.load().unwrap();
         assert_eq!(clipboard.entries.len(), 1);
     }
