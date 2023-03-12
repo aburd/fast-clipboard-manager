@@ -98,6 +98,7 @@ impl ClipboardHandler for OsClipboard {
         let entry = Entry::new(&content.as_bytes().to_vec(), EntryKind::Text);
         let mut clipboard = self.clipboard.lock().unwrap();
         clipboard.add_entry(entry).unwrap();
+        clipboard.save().unwrap();
 
         CallbackResult::Next
     }
