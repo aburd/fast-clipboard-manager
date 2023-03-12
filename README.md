@@ -21,7 +21,7 @@ Inspired by projects like kickoff and rofi.
   - Basic setup should be very easy to do on first startup
   - Finer grained controls should be offered through a config file
 
-![Screenshot as of 2023-03-12](https://github.com/aburd/fast-clipboard-manager/blob/main/screenshot-2023-03-12.png?raw=true)
+![Screenshot as of 2023-03-12](https://github.com/aburd/fast-clipboard-manager/blob/main/resources/demo-2023-03-12%2021-10.gif?raw=true)
 
 ## Todo List
 
