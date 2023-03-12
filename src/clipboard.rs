@@ -200,7 +200,6 @@ impl Clipboard {
                 self.clip_entries_to_max_size();
             }
         }
-        self.save()?;
         Ok(())
     }
 
@@ -217,10 +216,7 @@ impl Clipboard {
     }
 
     fn clip_entries_to_max_size(&mut self) {
-        self.entries = self
-            .entries
-            .drain((self.entries.len() - self.max_entries)..)
-            .collect();
+        self.entries = self.entries.drain(0..(self.entries.len() - 1)).collect();
     }
 }
 
@@ -288,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn removes_entries_over_max() {
+    fn doesnt_change_length_over_max() {
         let f = new_file("");
         let mut clipboard = Clipboard::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
@@ -300,7 +296,38 @@ mod tests {
             .add_entry(Entry::new(&vec![2], EntryKind::Text))
             .unwrap();
         assert_eq!(clipboard.entries.len(), 1);
+    }
+
+    #[test]
+    fn replaces_oldest_entry() {
+        let f = new_file("");
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        clipboard.max_entries = 1;
+        clipboard
+            .add_entry(Entry::new(&vec![1], EntryKind::Text))
+            .unwrap();
+        clipboard
+            .add_entry(Entry::new(&vec![2], EntryKind::Text))
+            .unwrap();
         assert_eq!(clipboard.entries[0].bytes, vec![2]);
+    }
+
+    #[test]
+    fn lastest_entry_is_first() {
+        let f = new_file("");
+        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        clipboard.max_entries = 2;
+        clipboard
+            .add_entry(Entry::new(&vec![1], EntryKind::Text))
+            .unwrap();
+        clipboard
+            .add_entry(Entry::new(&vec![2], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries[0].bytes, vec![2]);
+        clipboard
+            .add_entry(Entry::new(&vec![3], EntryKind::Text))
+            .unwrap();
+        assert_eq!(clipboard.entries[0].bytes, vec![3]);
     }
 
     #[test]
