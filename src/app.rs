@@ -5,6 +5,8 @@ use crate::{
 use ::clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::Master;
 use clipboard_master::{CallbackResult, ClipboardHandler};
+use eframe::egui;
+use eframe::egui::*;
 use log::{debug, error, info};
 use std::error::Error;
 use std::io;
@@ -20,18 +22,49 @@ pub struct FCClipboardApp {
 }
 
 impl FCClipboardApp {
-    fn new(clipboard: Arc<Mutex<Clipboard>>) -> FCClipboardApp {
+    pub fn new(clipboard: Arc<Mutex<Clipboard>>) -> FCClipboardApp {
         FCClipboardApp { clipboard }
+    }
+
+    fn handle_keypress(&mut self, ctx: &egui::Context) {
+        let clipboard = self.clipboard.lock().unwrap();
+        let copy_entry_at_idx = |idx: usize| {
+            let entry = clipboard.get_entry(idx);
+            // TODO: Maybe switch out how we set content
+            set_content(&String::from_utf8(entry.content().to_owned()).unwrap()).unwrap();
+        };
+        let select_row = |idx: i32| {};
+        if ctx.input(|i| i.key_pressed(Key::A)) {
+            copy_entry_at_idx(1);
+            select_row(0);
+        }
+        if ctx.input(|i| i.key_pressed(Key::S)) {
+            copy_entry_at_idx(2);
+            select_row(0);
+        }
+        if ctx.input(|i| i.key_pressed(Key::D)) {
+            copy_entry_at_idx(3);
+            select_row(0);
+        }
+        if ctx.input(|i| i.key_pressed(Key::F)) {
+            copy_entry_at_idx(4);
+            select_row(0);
+        }
     }
 }
 
 impl eframe::App for FCClipboardApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let clipboard = self.clipboard.lock().unwrap();
         egui::CentralPanel::default().show(ctx, |ui| {
+            self.handle_keypress(ctx);
             ui.heading("Fast Clipboard");
             ui.vertical_centered(|ui| {
-                for entry in clipboard.list_entries().iter() {
+                let clipboard = self.clipboard.lock().unwrap();
+                for (i, entry) in clipboard.list_entries().iter().enumerate() {
+                    if i == 0 {
+                        ui.label(format!("Current Entry: {}", entry));
+                        continue;
+                    }
                     ui.label(entry.to_string());
                 }
             });
@@ -42,66 +75,6 @@ impl eframe::App for FCClipboardApp {
 pub fn build_app() -> Result<FCClipboardApp, AppError> {
     let config = config::get_config().unwrap();
     let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
-
-    //     controller.connect_key_pressed(
-    //         clone!(@weak listbox, @weak clipboard => @default-return gtk::Inhibit(false), move |_, key, _n, _mod_type| {
-    //             let clipboard = clipboard.lock().unwrap();
-    //             let copy_entry_at_idx = |idx: usize| {
-    //                 let entry = clipboard.get_entry(idx);
-    //                 os_clipboard::set_content(&entry.content()).unwrap();
-    //             };
-    //             let select_row = |idx: i32| {
-    //             };
-    //             match key {
-    //                 Key::Return => {
-    //                     let selected = listbox.selected_row();
-    //                     if let Some(selected) = selected {
-    //                         let idx = selected.index();
-    //                         copy_entry_at_idx(idx as usize);
-    //                     }
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::a  => {
-    //                     copy_entry_at_idx(0);
-    //                     select_row(0);
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::s  => {
-    //                     copy_entry_at_idx(1);
-    //                     select_row(1);
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::d  => {
-    //                     copy_entry_at_idx(2);
-    //                     select_row(2);
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::f  => {
-    //                     copy_entry_at_idx(3);
-    //                     select_row(3);
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::g  => {
-    //                     copy_entry_at_idx(4);
-    //                     select_row(4);
-    //                     gtk::Inhibit(true)
-    //                 },
-    //                 Key::j => {
-    //                     let selected = listbox.selected_row();
-    //                     debug!("selected is {:?}", selected);
-    //                     if let Some(selected) = selected {
-    //                         let idx = selected.index() + 1;
-    //                         select_row(idx);
-    //                     }
-    //                     gtk::Inhibit(false)
-    //                 }
-    //                 _ => {
-    //                     debug!("Key pressed: {:?}", key);
-    //                     gtk::Inhibit(false)
-    //                 }
-    //             }
-    //         }),
-    //     );
 
     let cloned = Arc::clone(&clipboard);
     thread::spawn(move || {

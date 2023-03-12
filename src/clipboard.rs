@@ -90,8 +90,8 @@ impl Entry {
         })
     }
 
-    pub fn content(&self) -> String {
-        format!("{}", self)
+    pub fn content(&self) -> &[u8] {
+        &self.bytes
     }
 }
 

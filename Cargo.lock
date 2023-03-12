@@ -987,7 +987,6 @@ dependencies = [
  "clipboard",
  "clipboard-master",
  "eframe",
- "egui",
  "env_logger",
  "glib-build-tools",
  "home",
