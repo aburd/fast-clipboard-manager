@@ -46,25 +46,31 @@ impl FCClipboardApp {
     }
 
     fn handle_keypress(&mut self, ctx: &egui::Context) {
-        let mut copy_entry_at_idx = |idx: usize| {
+        let copy_entry_at_idx = |idx: usize| {
             // TODO: Maybe switch out how we set content
             let entry = self.clipboard.lock().unwrap().get_entry(idx).clone();
             let s = String::from_utf8(entry.content().to_owned()).unwrap();
             set_content(&s).unwrap();
         };
-        if ctx.input(|i| i.key_pressed(Key::Enter)) {
+        // Handle Close
+        if ctx.input(|i| i.key_released(Key::Escape)) {
             std::process::exit(0);
         }
-        if ctx.input(|i| i.key_pressed(Key::A)) {
+        // Handle Arrow Key Choosing
+        if ctx.input(|i| i.key_released(Key::Enter)) {
+            info!("TODO: handle choosing with arrow keys");
+        }
+        // Handle Hotkey Choosing
+        if ctx.input(|i| i.key_released(Key::A)) {
             copy_entry_at_idx(1);
         }
-        if ctx.input(|i| i.key_pressed(Key::S)) {
+        if ctx.input(|i| i.key_released(Key::S)) {
             copy_entry_at_idx(2);
         }
-        if ctx.input(|i| i.key_pressed(Key::D)) {
+        if ctx.input(|i| i.key_released(Key::D)) {
             copy_entry_at_idx(3);
         }
-        if ctx.input(|i| i.key_pressed(Key::F)) {
+        if ctx.input(|i| i.key_released(Key::F)) {
             copy_entry_at_idx(4);
         }
     }
