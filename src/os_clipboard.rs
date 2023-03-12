@@ -1,12 +1,9 @@
-use crate::clipboard::{Clipboard, Entry, EntryKind};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::{CallbackResult, ClipboardHandler};
-use gtk::glib::Sender;
-use gtk4 as gtk;
 use log::{debug, error, info};
 use std::error::Error;
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 
 pub struct OsClipboard {
     sender: Sender<String>,

@@ -1,6 +1,5 @@
-pub mod app_copy;
+pub mod app;
 pub mod clipboard;
-pub mod composite_templates;
 pub mod config;
 pub mod os_clipboard;
 
