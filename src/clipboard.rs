@@ -12,7 +12,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-const DEFAULT_MAX_ENTRIES: usize = 6;
+const DEFAULT_MAX_ENTRIES: usize = 5;
 
 pub type Key = [u8; 32];
 
