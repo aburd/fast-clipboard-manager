@@ -20,3 +20,15 @@ Inspired by projects like kickoff and rofi.
 - Configurable
   - Basic setup should be very easy to do on first startup
   - Finer grained controls should be offered through a config file
+
+![Screenshot as of 2023-03-12](https://github.com/aburd/fast-clipboard-manager/blob/main/screenshot-2023-03-12.png?raw=true)
+
+## Todo List
+
+- [x] Make basic config
+- [x] Persist selections to file
+- [x] Encypypt Entries
+- [ ] Onboarding
+- [ ] Key config
+- [ ] Style config
+- [ ] Don't show whole selection on screen
