@@ -28,7 +28,9 @@ Inspired by projects like kickoff and rofi.
 - [x] Make basic config
 - [x] Persist selections to file
 - [x] Encypypt Entries
+- [ ] Accessibility (escape to close, click off screen to close, etc)
 - [ ] Onboarding
 - [ ] Key config
 - [ ] Style config
 - [ ] Don't show whole selection on screen
+
