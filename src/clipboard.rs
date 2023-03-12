@@ -112,6 +112,7 @@ impl fmt::Display for Entry {
     }
 }
 
+#[derive(Debug)]
 pub struct Clipboard {
     storage: File,
     /// Clipboard entries. Stored as a vector because I am uncreative
