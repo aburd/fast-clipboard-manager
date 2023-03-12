@@ -13,7 +13,7 @@ pub fn window_frame(
 
     let panel_frame = egui::Frame {
         fill: ctx.style().visuals.window_fill(),
-        rounding: 20.0.into(),
+        rounding: 10.0.into(),
         stroke: ctx.style().visuals.widgets.noninteractive.fg_stroke,
         outer_margin: 0.5.into(), // so the stroke is within the bounds
         ..Default::default()
@@ -119,6 +119,7 @@ pub fn clipboard_items_ui(ui: &mut egui::Ui, entries: &[Entry]) {
 pub fn selected_frame() -> egui::Frame {
     egui::Frame::none()
         .inner_margin(10.0)
+        .rounding(10.0)
         .stroke(Stroke::new(1.0, Color32::WHITE))
 }
 
@@ -142,8 +143,9 @@ pub fn clipboard_items_inner_ui(ui: &mut egui::Ui, entries: &[Entry]) {
                 ui.set_width(ui.available_width());
                 for (i, entry) in entries[1..].iter().enumerate() {
                     ui.horizontal(|ui| {
+                        let keys = vec!["a", "s", "d", "f"];
                         ui.label(
-                            RichText::new(i.to_string())
+                            RichText::new(keys.get(i).unwrap().to_owned())
                                 .text_style(fonts::heading3())
                                 .strong(),
                         );
