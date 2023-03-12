@@ -84,47 +84,49 @@ fn build_ui(application: &gtk::Application) {
         .build();
 
     controller.connect_key_pressed(
-        clone!(@weak listbox, @weak clipboard => @default-return gtk::Inhibit(false), move |_, key, n, _mod_type| {
+        clone!(@weak listbox, @weak clipboard => @default-return gtk::Inhibit(false), move |_, key, _n, _mod_type| {
+            let clipboard = clipboard.lock().unwrap();
+            let copy_entry_at_idx = |idx: usize| {
+                let entry = clipboard.get_entry(idx);
+                os_clipboard::set_content(&entry.content()).unwrap();
+            };
+            let select_row = |idx: i32| {
+                let row = listbox.row_at_index(idx);
+                listbox.select_row(row.as_ref());
+            };
             match key {
                 Key::Return => {
                     let selected = listbox.selected_row();
 
                     if let Some(selected) = selected {
                         let idx = selected.index();
-                        let clipboard = clipboard.lock().unwrap();
-                        let entry = clipboard.get_entry(idx as usize);
-                        os_clipboard::set_content(&entry.content());
+                        copy_entry_at_idx(idx as usize);
                     }
                     gtk::Inhibit(true)
                 },
                 Key::a  => {
-                    let clipboard = clipboard.lock().unwrap();
-                    let entry = clipboard.get_entry(0);
-                    os_clipboard::set_content(&entry.content());
+                    copy_entry_at_idx(0);
+                    select_row(0);
                     gtk::Inhibit(true)
                 },
                 Key::s  => {
-                    let clipboard = clipboard.lock().unwrap();
-                    let entry = clipboard.get_entry(1);
-                    os_clipboard::set_content(&entry.content());
+                    copy_entry_at_idx(1);
+                    select_row(1);
                     gtk::Inhibit(true)
                 },
                 Key::d  => {
-                    let clipboard = clipboard.lock().unwrap();
-                    let entry = clipboard.get_entry(2);
-                    os_clipboard::set_content(&entry.content());
+                    copy_entry_at_idx(2);
+                    select_row(2);
                     gtk::Inhibit(true)
                 },
                 Key::f  => {
-                    let clipboard = clipboard.lock().unwrap();
-                    let entry = clipboard.get_entry(3);
-                    os_clipboard::set_content(&entry.content());
+                    copy_entry_at_idx(3);
+                    select_row(3);
                     gtk::Inhibit(true)
                 },
                 Key::g  => {
-                    let clipboard = clipboard.lock().unwrap();
-                    let entry = clipboard.get_entry(4);
-                    os_clipboard::set_content(&entry.content());
+                    copy_entry_at_idx(4);
+                    select_row(4);
                     gtk::Inhibit(true)
                 },
                 Key::j => {
@@ -133,9 +135,7 @@ fn build_ui(application: &gtk::Application) {
 
                     if let Some(selected) = selected {
                         let idx = selected.index() + 1;
-                        debug!("index is {}", idx);
-                        let row = listbox.row_at_index(idx);
-                        listbox.select_row(row.as_ref());
+                        select_row(idx);
                     }
                     gtk::Inhibit(false)
                 }

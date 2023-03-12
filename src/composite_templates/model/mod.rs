@@ -49,9 +49,7 @@ impl Model {
     }
 
     fn remove_all(&self) {
-        debug!("Len: {}", self.len());
         for i in (0..self.len()).rev() {
-            debug!("i: {}", i);
             self.remove(i as u32);
         }
     }
@@ -59,7 +57,6 @@ impl Model {
     fn len(&self) -> usize {
         let imp = self.imp();
         let data = imp.0.borrow();
-        debug!("row data: {:?}", data);
         data.len()
     }
 }
