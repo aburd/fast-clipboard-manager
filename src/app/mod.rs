@@ -46,28 +46,26 @@ impl FCClipboardApp {
     }
 
     fn handle_keypress(&mut self, ctx: &egui::Context) {
-        let clipboard = self.clipboard.lock().unwrap();
-        let copy_entry_at_idx = |idx: usize| {
-            let entry = clipboard.get_entry(idx);
+        let mut copy_entry_at_idx = |idx: usize| {
             // TODO: Maybe switch out how we set content
-            set_content(&String::from_utf8(entry.content().to_owned()).unwrap()).unwrap();
+            let entry = self.clipboard.lock().unwrap().get_entry(idx).clone();
+            let s = String::from_utf8(entry.content().to_owned()).unwrap();
+            set_content(&s).unwrap();
         };
-        let select_row = |idx: i32| {};
+        if ctx.input(|i| i.key_pressed(Key::Enter)) {
+            std::process::exit(0);
+        }
         if ctx.input(|i| i.key_pressed(Key::A)) {
             copy_entry_at_idx(1);
-            select_row(0);
         }
         if ctx.input(|i| i.key_pressed(Key::S)) {
             copy_entry_at_idx(2);
-            select_row(0);
         }
         if ctx.input(|i| i.key_pressed(Key::D)) {
             copy_entry_at_idx(3);
-            select_row(0);
         }
         if ctx.input(|i| i.key_pressed(Key::F)) {
             copy_entry_at_idx(4);
-            select_row(0);
         }
     }
 }

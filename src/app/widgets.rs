@@ -116,11 +116,17 @@ pub fn clipboard_items_ui(ui: &mut egui::Ui, entries: &[Entry]) {
     });
 }
 
+pub fn selected_frame() -> egui::Frame {
+    egui::Frame::none()
+        .inner_margin(10.0)
+        .stroke(Stroke::new(1.0, Color32::WHITE))
+}
+
 pub fn clipboard_items_inner_ui(ui: &mut egui::Ui, entries: &[Entry]) {
     Grid::new("entry-grid").show(ui, |ui| {
         // Present the current clipboard entry
         if let Some(entry) = entries.first() {
-            ui.vertical(|ui| {
+            selected_frame().show(ui, |ui| {
                 ui.label(
                     RichText::new("Current")
                         .text_style(fonts::heading2())
