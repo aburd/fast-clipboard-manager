@@ -2,16 +2,16 @@ use eframe::egui;
 use egui::{FontFamily, FontId, RichText, TextStyle};
 
 #[inline]
-fn heading2() -> TextStyle {
+pub fn heading2() -> TextStyle {
     TextStyle::Name("Heading2".into())
 }
 
 #[inline]
-fn heading3() -> TextStyle {
+pub fn heading3() -> TextStyle {
     TextStyle::Name("ContextHeading".into())
 }
 
-pub fn configure_text_styles(ctx: &egui::Context) {
+pub fn configure(ctx: &egui::Context) {
     use FontFamily::{Monospace, Proportional};
 
     let mut style = (*ctx.style()).clone();

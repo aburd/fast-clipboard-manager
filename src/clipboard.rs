@@ -99,11 +99,7 @@ impl fmt::Display for Entry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             EntryKind::Text => {
-                write!(
-                    f,
-                    "Entry: {}",
-                    String::from_utf8(self.bytes.clone()).unwrap()
-                )
+                write!(f, "{}", String::from_utf8(self.bytes.clone()).unwrap())
             }
             EntryKind::Image => {
                 write!(f, "[{}] ENTRY[IMAGE]: {:?}", self.datetime, self.bytes)

@@ -1,4 +1,5 @@
 mod fonts;
+mod spacing;
 mod widgets;
 
 use crate::{
@@ -26,7 +27,8 @@ pub struct FCClipboardApp {
 
 impl FCClipboardApp {
     pub fn new(cc: &eframe::CreationContext<'_>, clipboard: Arc<Mutex<Clipboard>>) -> Self {
-        fonts::configure_text_styles(&cc.egui_ctx);
+        fonts::configure(&cc.egui_ctx);
+        spacing::configure(&cc.egui_ctx);
         FCClipboardApp { clipboard }
     }
 

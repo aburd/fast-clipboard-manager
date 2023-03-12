@@ -1,3 +1,4 @@
+use super::fonts;
 use crate::clipboard::Entry;
 use eframe::egui;
 use eframe::egui::*;
@@ -103,13 +104,49 @@ pub fn window_controls(ui: &mut egui::Ui, frame: &mut eframe::Frame) {
 pub fn clipboard_items_ui(ui: &mut egui::Ui, entries: &[Entry]) {
     use egui::*;
 
-    ui.vertical(|ui| {
-        for (i, entry) in entries.iter().enumerate() {
-            if i == 0 {
-                ui.label(format!("Current Entry: {}", entry));
-                continue;
-            }
-            ui.label(entry.to_string());
+    containers::ScrollArea::vertical().show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(10.);
+            ui.vertical(|ui| {
+                ui.set_width(ui.available_width());
+                ui.add_space(10.);
+                clipboard_items_inner_ui(ui, entries);
+            })
+        });
+    });
+}
+
+pub fn clipboard_items_inner_ui(ui: &mut egui::Ui, entries: &[Entry]) {
+    Grid::new("entry-grid").show(ui, |ui| {
+        // Present the current clipboard entry
+        if let Some(entry) = entries.first() {
+            ui.vertical(|ui| {
+                ui.label(
+                    RichText::new("Current")
+                        .text_style(fonts::heading2())
+                        .strong(),
+                );
+                ui.add_space(5.);
+                ui.monospace(entry.to_string());
+            });
+            ui.end_row();
         }
+        if entries.len() > 1 {
+            ui.vertical(|ui| {
+                ui.set_width(ui.available_width());
+                for (i, entry) in entries[1..].iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(i.to_string())
+                                .text_style(fonts::heading3())
+                                .strong(),
+                        );
+                        ui.add_space(5.);
+                        ui.monospace(entry.to_string());
+                    });
+                }
+            });
+        }
+        ui.end_row();
     });
 }
