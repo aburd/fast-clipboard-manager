@@ -71,7 +71,7 @@ fn build_ui(application: &gtk::Application) {
     listbox.bind_model(
         Some(&model),
         clone!(@weak window => @default-panic, move |item| {
-            ClipboardEntry ::new(
+            ClipboardEntry::new(
                 item.downcast_ref::<RowData>()
                     .expect("RowData is of wrong type"),
             )
@@ -166,9 +166,29 @@ fn build_ui(application: &gtk::Application) {
         ));
     }
 
+    let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+    let os_clipboard = OsClipboard::new(tx);
     thread::spawn(move || {
-        Master::new(OsClipboard::new(clipboard_cm)).run().unwrap();
+        Master::new(os_clipboard).run().unwrap();
     });
 
     window.show();
+
+    rx.attach(None, clone!(@weak model => @default-return glib::source::Continue(true), move |action| {
+        let mut clipboard = clipboard_cm.lock().unwrap();
+        let entry = clipboard::Entry::new(&action.as_bytes().to_vec(), clipboard::EntryKind::Text);
+        clipboard.add_entry(entry).unwrap();
+        clipboard.save().unwrap();
+        let entries: Vec<_> = clipboard.list_entries().iter().enumerate().map(|(i, entry)| {
+            RowData::new(
+                &i.to_string(),
+                &entry.content(),
+                &entry.datetime,
+            )
+        }).collect();
+        model.set_all(entries); 
+
+        info!("saved copied value as new entry into clipboard");
+        glib::source::Continue(true)
+    }));
 }

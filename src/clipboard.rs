@@ -185,6 +185,10 @@ impl Clipboard {
         &self.entries
     }
 
+    pub fn size(&self) -> usize {
+        self.entries.len()
+    }
+
     /// Clips off any entries at beginning
     pub fn add_entry(&mut self, entry: Entry) -> Result<(), EntryError> {
         if let Some(idx) = self.entries.iter().position(|e| e.bytes == entry.bytes) {

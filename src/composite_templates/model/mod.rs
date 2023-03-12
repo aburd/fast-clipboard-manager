@@ -4,6 +4,7 @@ mod imp;
 
 use gtk::subclass::prelude::*;
 use gtk4 as gtk;
+use log::debug;
 
 use crate::composite_templates::row_data::RowData;
 use gtk::{gio, glib, prelude::*};
@@ -38,6 +39,28 @@ impl Model {
         imp.0.borrow_mut().remove(index as usize);
         // Emits a signal that 1 item was removed, 0 added at the position index
         self.items_changed(index, 1, 0);
+    }
+
+    pub fn set_all(&self, obj: Vec<RowData>) {
+        self.remove_all();
+        for row in obj {
+            self.append(&row);
+        }
+    }
+
+    fn remove_all(&self) {
+        debug!("Len: {}", self.len());
+        for i in (0..self.len()).rev() {
+            debug!("i: {}", i);
+            self.remove(i as u32);
+        }
+    }
+
+    fn len(&self) -> usize {
+        let imp = self.imp();
+        let data = imp.0.borrow();
+        debug!("row data: {:?}", data);
+        data.len()
     }
 }
 
