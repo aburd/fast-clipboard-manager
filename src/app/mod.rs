@@ -45,15 +45,15 @@ impl FCClipboardApp {
         Ok(FCClipboardApp::new(cc, clipboard))
     }
 
-    fn handle_keypress(&mut self, ctx: &egui::Context) {
+    fn handle_keypress(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let mut copy_entry_at_idx = |idx: usize| {
             // TODO: Maybe switch out how we set content
             let entry = self.clipboard.lock().unwrap().get_entry(idx).clone();
             let s = String::from_utf8(entry.content().to_owned()).unwrap();
             set_content(&s).unwrap();
         };
-        if ctx.input(|i| i.key_pressed(Key::Enter)) {
-            std::process::exit(0);
+        if ctx.input(|i| i.key_pressed(Key::Escape)) {
+            frame.close();
         }
         if ctx.input(|i| i.key_pressed(Key::A)) {
             copy_entry_at_idx(1);
@@ -72,13 +72,17 @@ impl FCClipboardApp {
 
 impl eframe::App for FCClipboardApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.handle_keypress(ctx, frame);
         widgets::window_frame(ctx, frame, "Fast Clipboard Manager", |ui| {
             // Handle general events
-            self.handle_keypress(ctx);
             // UI
             let clipboard = self.clipboard.lock().unwrap();
             widgets::clipboard_items_ui(ui, clipboard.list_entries());
         });
+    }
+
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        self.clipboard.lock().unwrap().save().unwrap();
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
