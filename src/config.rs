@@ -6,17 +6,38 @@ use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const CONFIG_FILE_NAME: &str = "config.json";
+const DEFAULT_CONFIG_FILE_NAME: &str = "config.json";
+const DEFAULT_CLIPBOARD_SIZE: usize = 5;
+const DEFAULT_CHARACTERS_COUNT: i64 = 120;
+const DEFAULT_VISIBLE_CONTENT_CHARACTERS_COUNT: i64 = 10;
+const DEFAULT_CHARACTER_COUNT_VISIBLE: bool = true;
+const DEFAULT_CAN_TOGGLE_CONTENT_VISIBLE: bool = true;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Config {
+    // Where the config file is stored
     pub config_dir: PathBuf,
+    // Total number of clipboard entries stored
     pub clipboard_size: usize,
+    // Path to the key
     key_path: Option<PathBuf>,
+    // If text, how many characters are shown total
+    // includes obscured text (i.e. * character)
+    pub characters_count: i64,
+    // If text, how many characters are visible to user
+    // positive = how many are plaintext
+    // 0 and below have special meaning
+    // 0 = all displayed as *
+    // negative = all content in plaintext
+    pub visible_content_characters_count: i64,
+    // Display the count of characters in each entry?
+    pub character_count_visible: bool,
+    // Define whether user can press a key to reveal the content
+    pub can_toggle_content_visible: bool,
 }
 
 impl Config {
-    /// Loads config file from the dir_path with config.json appended
+    /// Loads config file from the dir_path
     /// Creates file if it doesn't exist
     pub fn load(dir_path: PathBuf) -> Result<Config, Box<dyn Error>> {
         info!("Loading config from: {:?}", dir_path);
@@ -25,7 +46,7 @@ impl Config {
             fs::create_dir(&dir_path)?;
         }
 
-        let config_path = dir_path.join(CONFIG_FILE_NAME);
+        let config_path = dir_path.join(DEFAULT_CONFIG_FILE_NAME);
         let mut f = OpenOptions::new()
             .read(true)
             .write(true)
@@ -36,7 +57,7 @@ impl Config {
 
         if buffer.is_empty() {
             info!("No config file found. Creating at {:?}.", &config_path);
-            let config = Config::new(&dir_path, 100);
+            let config = Config::default().config_dir(&dir_path);
             buffer = serde_json::to_string(&config)?;
             f.write_all(&buffer.as_bytes())?;
         }
@@ -47,7 +68,7 @@ impl Config {
         let bytes = serde_json::to_vec(self)?;
         let mut f = OpenOptions::new()
             .write(true)
-            .open(self.config_dir.join(CONFIG_FILE_NAME))?;
+            .open(self.config_dir.join(DEFAULT_CONFIG_FILE_NAME))?;
 
         f.write_all(&bytes)?;
         Ok(())
@@ -67,17 +88,31 @@ impl Config {
         self.key_path = Some(path);
     }
 
-    fn new(p: &PathBuf, clipboard_size: usize) -> Config {
+    fn config_dir(mut self, config_dir: &PathBuf) -> Self {
+        self.config_dir = config_dir.clone();
+        self
+    }
+
+    fn default_home_dir() -> PathBuf {
+        let home_path = home::home_dir().unwrap();
+        home_path.join(".config/fast_clipboard_manager")
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
         Config {
-            config_dir: p.clone(),
-            clipboard_size,
+            config_dir: Self::default_home_dir(),
+            clipboard_size: DEFAULT_CLIPBOARD_SIZE,
             key_path: None,
+            characters_count: DEFAULT_CHARACTERS_COUNT,
+            visible_content_characters_count: DEFAULT_VISIBLE_CONTENT_CHARACTERS_COUNT,
+            character_count_visible: DEFAULT_CHARACTER_COUNT_VISIBLE,
+            can_toggle_content_visible: DEFAULT_CAN_TOGGLE_CONTENT_VISIBLE,
         }
     }
 }
 
 pub fn get_config() -> Result<Config, Box<dyn Error>> {
-    let home_path = home::home_dir().unwrap();
-    let dir_path = home_path.join(".config/fast_clipboard_manager");
-    Config::load(dir_path)
+    Config::load(Config::default_home_dir())
 }

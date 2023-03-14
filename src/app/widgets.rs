@@ -104,16 +104,13 @@ pub fn window_controls(ui: &mut egui::Ui, frame: &mut eframe::Frame) {
 pub fn clipboard_items_ui(ui: &mut egui::Ui, entries: &[Entry]) {
     use egui::*;
 
-    containers::ScrollArea::vertical().show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.add_space(10.);
-            ui.vertical(|ui| {
-                ui.set_width(ui.available_width());
-                ui.add_space(10.);
+    containers::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            egui::Frame::default().inner_margin(10.).show(ui, |ui| {
                 clipboard_items_inner_ui(ui, entries);
-            })
+            });
         });
-    });
 }
 
 pub fn selected_frame() -> egui::Frame {
@@ -121,6 +118,10 @@ pub fn selected_frame() -> egui::Frame {
         .inner_margin(10.0)
         .rounding(10.0)
         .stroke(Stroke::new(1.0, Color32::WHITE))
+}
+
+pub fn unselected_frame() -> egui::Frame {
+    egui::Frame::none().inner_margin(10.0).rounding(10.0)
 }
 
 pub fn clipboard_items_inner_ui(ui: &mut egui::Ui, entries: &[Entry]) {
@@ -133,24 +134,24 @@ pub fn clipboard_items_inner_ui(ui: &mut egui::Ui, entries: &[Entry]) {
                         .text_style(fonts::heading2())
                         .strong(),
                 );
-                ui.add_space(5.);
                 ui.monospace(entry.to_string());
             });
-            ui.end_row();
         }
+        ui.end_row();
         if entries.len() > 1 {
             ui.vertical(|ui| {
-                ui.set_width(ui.available_width());
                 for (i, entry) in entries[1..].iter().enumerate() {
-                    ui.horizontal(|ui| {
-                        let keys = vec!["a", "s", "d", "f"];
-                        ui.label(
-                            RichText::new(keys.get(i).unwrap().to_owned())
-                                .text_style(fonts::heading3())
-                                .strong(),
-                        );
-                        ui.add_space(5.);
-                        ui.monospace(entry.to_string());
+                    unselected_frame().show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            let keys = vec!["a", "s", "d", "f"];
+                            ui.label(
+                                RichText::new(keys.get(i).unwrap().to_owned())
+                                    .text_style(fonts::heading3())
+                                    .strong(),
+                            );
+                            ui.add_space(5.);
+                            ui.monospace(entry.to_string());
+                        });
                     });
                 }
             });

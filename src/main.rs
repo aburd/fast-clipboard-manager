@@ -7,6 +7,7 @@ use fast_clipboard::app::FCClipboardApp;
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
+    env_logger::init();
     let native_options = eframe::NativeOptions {
         transparent: true,
         decorated: false,

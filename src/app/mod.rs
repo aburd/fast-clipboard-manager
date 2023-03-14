@@ -4,14 +4,14 @@ mod widgets;
 
 use crate::{
     clipboard::{self, Clipboard, Entry, EntryKind},
-    config,
+    config::{self, Config},
 };
 use ::clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::Master;
 use clipboard_master::{CallbackResult, ClipboardHandler};
 use eframe::egui;
 use eframe::egui::*;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use std::error::Error;
 use std::io;
 use std::sync::{Arc, Mutex};
@@ -33,7 +33,13 @@ impl FCClipboardApp {
     }
 
     pub fn build_app(cc: &eframe::CreationContext<'_>) -> Result<Self, AppError> {
-        let config = config::get_config().unwrap();
+        let config = config::get_config().unwrap_or_else(|err| {
+            warn!(
+                "Configuration file could not be parsed: \"{}\". Using defaults...",
+                err
+            );
+            Config::default()
+        });
         let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
 
         let cloned = Arc::clone(&clipboard);
@@ -53,24 +59,27 @@ impl FCClipboardApp {
             set_content(&s).unwrap();
         };
         // Handle Close
-        if ctx.input(|i| i.key_released(Key::Escape)) {
+        if ctx.input(|i| i.key_pressed(Key::Escape)) {
             std::process::exit(0);
         }
         // Handle Arrow Key Choosing
-        if ctx.input(|i| i.key_released(Key::Enter)) {
+        if ctx.input(|i| i.key_pressed(Key::Enter)) {
             info!("TODO: handle choosing with arrow keys");
         }
+        if ctx.input(|i| i.pointer.any_click()) {
+            debug!("Clicked at: {:?}", ctx.pointer_interact_pos());
+        }
         // Handle Hotkey Choosing
-        if ctx.input(|i| i.key_released(Key::A)) {
+        if ctx.input(|i| i.key_pressed(Key::A)) {
             copy_entry_at_idx(1);
         }
-        if ctx.input(|i| i.key_released(Key::S)) {
+        if ctx.input(|i| i.key_pressed(Key::S)) {
             copy_entry_at_idx(2);
         }
-        if ctx.input(|i| i.key_released(Key::D)) {
+        if ctx.input(|i| i.key_pressed(Key::D)) {
             copy_entry_at_idx(3);
         }
-        if ctx.input(|i| i.key_released(Key::F)) {
+        if ctx.input(|i| i.key_pressed(Key::F)) {
             copy_entry_at_idx(4);
         }
     }
