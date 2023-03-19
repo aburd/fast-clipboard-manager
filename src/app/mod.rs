@@ -9,9 +9,11 @@ use crate::{
 use ::clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::Master;
 use clipboard_master::{CallbackResult, ClipboardHandler};
-use eframe::egui;
-use eframe::egui::*;
+use gtk::prelude::*;
+use gtk::{Inhibit, Window, WindowType};
 use log::{debug, error, info};
+use relm::{connect, Relm, Update, Widget};
+use relm_derive::Msg;
 use std::error::Error;
 use std::io;
 use std::sync::{Arc, Mutex};
@@ -23,6 +25,12 @@ pub struct AppError {}
 #[derive(Debug)]
 pub struct FCClipboardApp {
     clipboard: Arc<Mutex<Clipboard>>,
+}
+
+#[derive(Msg)]
+enum Msg {
+    AddEntry(String),
+    Quit,
 }
 
 impl FCClipboardApp {
