@@ -1,3 +1,4 @@
+/// Deals with reading/writing clipboard entries to storage (e.g. a File)
 use crate::config::Config;
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -109,11 +110,11 @@ impl fmt::Display for Entry {
 }
 
 #[derive(Debug)]
-pub struct Clipboard {
+pub struct ClipboardStorage {
     storage: File,
-    /// Clipboard entries. Stored as a vector because I am uncreative
+    /// ClipboardStorage entries. Stored as a vector because I am uncreative
     entries: Vec<Entry>,
-    /// How many entries are allowed in the Clipboard
+    /// How many entries are allowed in the ClipboardStorage
     /// A new copy will always force the oldest from the clipboard
     max_entries: usize,
     key: Key,
@@ -123,9 +124,9 @@ pub fn generate_encryption_key() -> Key {
     ChaCha20Poly1305::generate_key(&mut OsRng).into()
 }
 
-impl Clipboard {
+impl ClipboardStorage {
     pub fn new(storage: File, key: Key) -> Self {
-        Clipboard {
+        ClipboardStorage {
             storage,
             entries: vec![],
             max_entries: DEFAULT_MAX_ENTRIES,
@@ -133,7 +134,7 @@ impl Clipboard {
         }
     }
 
-    /// Persists current Clipboard to the Writer
+    /// Persists current ClipboardStorage to the Writer
     pub fn save(&mut self) -> Result<(), EntryError> {
         let encoded: Result<Vec<EncryptedEntry>, EntryError> = self
             .entries
@@ -151,7 +152,7 @@ impl Clipboard {
         Ok(())
     }
 
-    /// Loads all from Reader into current Clipboard
+    /// Loads all from Reader into current ClipboardStorage
     pub fn load(&mut self) -> Result<(), EntryError> {
         let mut buf = String::new();
         self.storage.read_to_string(&mut buf)?;
@@ -173,7 +174,7 @@ impl Clipboard {
         Ok(())
     }
 
-    /// idx will wrap to length of entries in Clipboard
+    /// idx will wrap to length of entries in ClipboardStorage
     pub fn get_entry(&self, idx: usize) -> &Entry {
         &self.entries[idx % self.entries.len()]
     }
@@ -216,7 +217,7 @@ impl Clipboard {
     }
 }
 
-pub fn get_clipboard(config: &Config) -> Result<Clipboard, Box<dyn Error>> {
+pub fn get_clipboard(config: &Config) -> Result<ClipboardStorage, Box<dyn Error>> {
     let storage = OpenOptions::new()
         .read(true)
         .write(true)
@@ -225,7 +226,7 @@ pub fn get_clipboard(config: &Config) -> Result<Clipboard, Box<dyn Error>> {
         .unwrap();
     // TODO: setup key gracefully
     let key: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
-    let mut clipboard = Clipboard::new(storage, key.to_owned());
+    let mut clipboard = ClipboardStorage::new(storage, key.to_owned());
     clipboard.load()?;
     Ok(clipboard)
 }
@@ -247,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn can_encode_and_decode_entry() {
+    fn test_store_can_encode_and_decode_entry() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encrypted = entry.encode(KEY).unwrap();
@@ -257,9 +258,9 @@ mod tests {
     }
 
     #[test]
-    fn can_add_entry() {
+    fn test_store_can_add_entry() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         assert_eq!(clipboard.entries.len(), 0);
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
@@ -268,9 +269,9 @@ mod tests {
     }
 
     #[test]
-    fn can_remove_entry_from_clipboard() {
+    fn test_store_can_remove_entry_from_clipboard() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard
             .add_entry(Entry::new(&vec![], EntryKind::Text))
             .unwrap();
@@ -280,9 +281,9 @@ mod tests {
     }
 
     #[test]
-    fn doesnt_change_length_over_max() {
+    fn test_store_doesnt_change_length_over_max() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -295,9 +296,9 @@ mod tests {
     }
 
     #[test]
-    fn replaces_oldest_entry() {
+    fn test_store_replaces_oldest_entry() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -309,9 +310,9 @@ mod tests {
     }
 
     #[test]
-    fn lastest_entry_is_first() {
+    fn test_store_lastest_entry_is_first() {
         let f = new_file("");
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 2;
         clipboard
             .add_entry(Entry::new(&vec![1], EntryKind::Text))
@@ -327,13 +328,13 @@ mod tests {
     }
 
     #[test]
-    fn load_works() {
+    fn test_store_load_works() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encoded = entry.encode(KEY).unwrap();
         let json_s = serde_json::to_string(&vec![encoded]).unwrap();
         let f = new_file(&json_s);
-        let mut clipboard = Clipboard::new(f, KEY.to_owned());
+        let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.load().unwrap();
         assert_eq!(clipboard.entries.len(), 1);
     }
