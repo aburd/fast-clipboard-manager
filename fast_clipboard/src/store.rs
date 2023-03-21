@@ -248,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn can_encode_and_decode_entry() {
+    fn test_store_can_encode_and_decode_entry() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encrypted = entry.encode(KEY).unwrap();
@@ -258,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn can_add_entry() {
+    fn test_store_can_add_entry() {
         let f = new_file("");
         let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         assert_eq!(clipboard.entries.len(), 0);
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn can_remove_entry_from_clipboard() {
+    fn test_store_can_remove_entry_from_clipboard() {
         let f = new_file("");
         let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard
@@ -281,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn doesnt_change_length_over_max() {
+    fn test_store_doesnt_change_length_over_max() {
         let f = new_file("");
         let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn replaces_oldest_entry() {
+    fn test_store_replaces_oldest_entry() {
         let f = new_file("");
         let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 1;
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn lastest_entry_is_first() {
+    fn test_store_lastest_entry_is_first() {
         let f = new_file("");
         let mut clipboard = ClipboardStorage::new(f, KEY.to_owned());
         clipboard.max_entries = 2;
@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn load_works() {
+    fn test_store_load_works() {
         let bytes = vec![1, 2, 3, 4];
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encoded = entry.encode(KEY).unwrap();
