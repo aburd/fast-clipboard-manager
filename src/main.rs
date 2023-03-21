@@ -1,12 +1,15 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
+use clipboard_master::Master;
 use fast_clipboard::app::FCAppModel;
 use fast_clipboard::clipboard;
 use fast_clipboard::config;
 use fast_clipboard::os_clipboard;
+use fast_clipboard::os_clipboard::OsClipboard;
 use log::debug;
 use relm4::RelmApp;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 fn main() {
     env_logger::init();

@@ -2,20 +2,19 @@
 // mod spacing;
 // mod widgets;
 
-use crate::{
-    clipboard::{self, Clipboard, Entry, EntryKind},
-    os_clipboard,
-};
-use ::clipboard::{ClipboardContext, ClipboardProvider};
-use log::{debug, error, info};
+use crate::clipboard::{Clipboard, Entry, EntryKind};
+use crate::os_clipboard::OsClipboard;
+use clipboard_master::Master;
+use log::info;
 use relm4::gtk;
 use relm4::gtk::gdk;
-use relm4::gtk::gdk::Display;
+use relm4::gtk::gio;
 use relm4::gtk::glib::clone;
 use relm4::gtk::prelude::*;
 use relm4::RelmWidgetExt;
 use relm4::{ComponentParts, ComponentSender, SimpleComponent};
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 #[derive(Debug)]
 pub struct AppError {}
@@ -29,12 +28,29 @@ pub struct FCAppModel {
 pub enum AppInput {
     AddEntry(String),
     SelectEntry(usize),
+    ClipboardChanged,
     Quit,
 }
 
 #[derive(Debug)]
 pub struct FCAppWidgets {
     labels: Vec<gtk::Label>,
+}
+
+fn copy() {
+    // let clipboard_model = self.clipboard_model.clone();
+    // self.clipboard
+    //     .read_text_async(gio::Cancellable::NONE, move |res| {
+    //         res.map(|opt| opt.map_or(String::new(), |val| String::from(val)))
+    //             .map(|content| {
+    //                 let mut clipboard = clipboard_model.lock().unwrap();
+    //                 info!("got content: {}", content);
+    //                 let entry = Entry::new(&content.clone().as_bytes().to_vec(), EntryKind::Text);
+    //                 clipboard.add_entry(entry).unwrap();
+    //                 clipboard.save().unwrap();
+    //             })
+    //             .unwrap();
+    //     });
 }
 
 impl SimpleComponent for FCAppModel {
@@ -57,10 +73,15 @@ impl SimpleComponent for FCAppModel {
         window: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        debug!("Getting display...");
-        let display = Display::default().unwrap();
-        debug!("Got display: {:?}", display);
-        os_clipboard::test_display(display);
+        let display = gtk::gdk::Display::default().unwrap();
+        let sender_clone = sender.clone();
+        thread::spawn(move || {
+            Master::new(OsClipboard {
+                sender: sender_clone,
+            })
+            .run()
+            .unwrap();
+        });
 
         let clip_clone = clipboard.clone();
         let clip_inner = clip_clone.lock().unwrap();
@@ -139,5 +160,22 @@ impl SimpleComponent for FCAppModel {
         let widgets = FCAppWidgets { labels };
 
         ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
+        match message {
+            AppInput::AddEntry(s) => {
+                info!("Added: {}", s);
+            }
+            AppInput::SelectEntry(idx) => {
+                info!("selected: {}", idx);
+            }
+            AppInput::ClipboardChanged => {
+                info!("Changed!");
+            }
+            AppInput::Quit => {
+                std::process::exit(0);
+            }
+        }
     }
 }
