@@ -1,24 +1,35 @@
-use clipboard_master::{CallbackResult, ClipboardHandler};
-/// Deals with the operating system's Clipboard
-use fast_clipboard::app::{AppInput, FCAppModel};
-use log::{debug, error};
-use relm4::ComponentSender;
-use std::io;
+use fast_clipboard::store::{Entry, EntryKind};
+use std::io::Read;
+use wl_clipboard_rs::paste::{get_contents, ClipboardType, Error, MimeType, Seat};
 
-pub struct OsClipboard {
-    pub sender: ComponentSender<FCAppModel>,
+pub struct Tracker {
+    current: Option<Entry>,
 }
 
-impl ClipboardHandler for OsClipboard {
-    fn on_clipboard_change(&mut self) -> CallbackResult {
-        debug!("User copied something into clipboard");
-        self.sender.input(AppInput::ClipboardChanged);
-
-        CallbackResult::Next
+impl Tracker {
+    pub fn new() -> Self {
+        Tracker { current: None }
     }
 
-    fn on_clipboard_error(&mut self, error: io::Error) -> CallbackResult {
-        error!("clipboard master error: {}", error);
-        CallbackResult::Next
+    pub fn poll(&mut self) {
+        let result = get_contents(ClipboardType::Regular, Seat::Unspecified, MimeType::Text);
+        match result {
+            Ok((mut pipe, _)) => {
+                let mut contents = vec![];
+                pipe.read_to_end(&mut contents).unwrap();
+                if self.current.is_some() && self.current.unwrap().content() == contents {
+                    return;
+                }
+                let entry = Entry::new(&contents, EntryKind::Text);
+                self.current = Some(entry);
+            }
+            // Err(Error::NoSeats) | Err(Error::ClipboardEmpty) | Err(Error::NoMimeType) => {
+            //     // The clipboard is empty or doesn't contain text, nothing to worry about.
+            // }
+            // Err(err) => {
+            //     error!("Err: {}", err);
+            // }
+            _ => {}
+        }
     }
 }

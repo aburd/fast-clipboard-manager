@@ -1,3 +1,10 @@
+mod clipboard;
+
+use log::info;
+
 fn main() {
-    println!("Starting daemon");
+    env_logger::init();
+
+    info!("Starting daemon");
+    clipboard::paste();
 }
