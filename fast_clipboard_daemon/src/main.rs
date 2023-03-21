@@ -6,5 +6,6 @@ fn main() {
     env_logger::init();
 
     info!("Starting daemon");
-    clipboard::paste();
+    let mut tracker = clipboard::Tracker::new();
+    tracker.poll();
 }
