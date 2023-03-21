@@ -1,26 +1,26 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
-use clipboard_master::Master;
-use fast_clipboard::app::FCAppModel;
-use fast_clipboard::clipboard;
+mod gui;
+
 use fast_clipboard::config;
-use fast_clipboard::os_clipboard;
-use fast_clipboard::os_clipboard::OsClipboard;
+use fast_clipboard::store;
+use gui::FCAppModel;
 use log::debug;
 use relm4::RelmApp;
 use std::sync::{Arc, Mutex};
-use std::thread;
+
+const APPLICATION_ID: &str = "com.github.aburd.fast-clipboard-manager";
 
 fn main() {
     env_logger::init();
     debug!("logger initiated");
 
     let config = config::get_config().unwrap();
-    let clipboard = Arc::new(Mutex::new(clipboard::get_clipboard(&config).unwrap()));
+    let clipboard = Arc::new(Mutex::new(store::get_clipboard(&config).unwrap()));
     debug!("config and clipboard loaded");
 
     debug!("starting app");
-    let app = RelmApp::new("aburd.fast_clipboard_manager");
+    let app = RelmApp::new(APPLICATION_ID);
     app.run::<FCAppModel>(clipboard);
     debug!("app exited");
 }

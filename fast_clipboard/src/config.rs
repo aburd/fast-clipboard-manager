@@ -1,4 +1,4 @@
-use crate::clipboard::Key;
+use crate::store::Key;
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::error::Error;

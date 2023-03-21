@@ -1,0 +1,11 @@
+[package]
+name = "fast_clipboard_daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fast_clipboard = { path = "../fast_clipboard" }
+
+[[bin]]
+name = "daemon"
+path = "src/main.rs"

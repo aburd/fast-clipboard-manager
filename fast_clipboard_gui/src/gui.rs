@@ -1,11 +1,5 @@
-// mod fonts;
-// mod spacing;
-// mod widgets;
-
-use crate::clipboard::{Clipboard, Entry, EntryKind};
-use crate::os_clipboard::OsClipboard;
-use clipboard_master::Master;
-use log::info;
+use fast_clipboard::store::{ClipboardStorage, Entry, EntryKind};
+use log::{error, info};
 use relm4::gtk;
 use relm4::gtk::gdk;
 use relm4::gtk::gio;
@@ -21,7 +15,7 @@ pub struct AppError {}
 
 #[derive(Debug)]
 pub struct FCAppModel {
-    clipboard: Arc<Mutex<Clipboard>>,
+    clipboard: Arc<Mutex<ClipboardStorage>>,
 }
 
 #[derive(Debug)]
@@ -37,26 +31,10 @@ pub struct FCAppWidgets {
     labels: Vec<gtk::Label>,
 }
 
-fn copy() {
-    // let clipboard_model = self.clipboard_model.clone();
-    // self.clipboard
-    //     .read_text_async(gio::Cancellable::NONE, move |res| {
-    //         res.map(|opt| opt.map_or(String::new(), |val| String::from(val)))
-    //             .map(|content| {
-    //                 let mut clipboard = clipboard_model.lock().unwrap();
-    //                 info!("got content: {}", content);
-    //                 let entry = Entry::new(&content.clone().as_bytes().to_vec(), EntryKind::Text);
-    //                 clipboard.add_entry(entry).unwrap();
-    //                 clipboard.save().unwrap();
-    //             })
-    //             .unwrap();
-    //     });
-}
-
 impl SimpleComponent for FCAppModel {
     type Input = AppInput;
     type Output = ();
-    type Init = Arc<Mutex<Clipboard>>;
+    type Init = Arc<Mutex<ClipboardStorage>>;
     type Root = gtk::Window;
     type Widgets = FCAppWidgets;
 
@@ -74,14 +52,6 @@ impl SimpleComponent for FCAppModel {
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
         let display = gtk::gdk::Display::default().unwrap();
-        let sender_clone = sender.clone();
-        thread::spawn(move || {
-            Master::new(OsClipboard {
-                sender: sender_clone,
-            })
-            .run()
-            .unwrap();
-        });
 
         let clip_clone = clipboard.clone();
         let clip_inner = clip_clone.lock().unwrap();
@@ -158,7 +128,6 @@ impl SimpleComponent for FCAppModel {
         );
 
         let widgets = FCAppWidgets { labels };
-
         ComponentParts { model, widgets }
     }
 

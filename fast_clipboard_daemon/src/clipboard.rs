@@ -1,5 +1,6 @@
-use crate::app::{AppInput, FCAppModel};
 use clipboard_master::{CallbackResult, ClipboardHandler};
+/// Deals with the operating system's Clipboard
+use fast_clipboard::app::{AppInput, FCAppModel};
 use log::{debug, error};
 use relm4::ComponentSender;
 use std::io;
