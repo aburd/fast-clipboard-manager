@@ -15,8 +15,8 @@ fn main() {
     env_logger::init();
     debug!("logger initiated");
 
-    let config = config::get_config().unwrap();
-    let clipboard = Arc::new(Mutex::new(store::get_clipboard(&config).unwrap()));
+    let config_file = config::get_config().unwrap();
+    let clipboard = Arc::new(Mutex::new(store::get_clipboard(&config_file.path).unwrap()));
     debug!("config and clipboard loaded");
 
     debug!("starting app");

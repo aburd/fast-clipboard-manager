@@ -1,5 +1,3 @@
-/// Deals with reading/writing clipboard entries to storage (e.g. a File)
-use crate::config::Config;
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     ChaCha20Poly1305, Nonce,
@@ -11,6 +9,8 @@ use std::error::Error;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
+/// Deals with reading/writing clipboard entries to storage (e.g. a File)
+use std::path::PathBuf;
 use thiserror::Error;
 
 const DEFAULT_MAX_ENTRIES: usize = 5;
@@ -217,12 +217,12 @@ impl ClipboardStorage {
     }
 }
 
-pub fn get_clipboard(config: &Config) -> Result<ClipboardStorage, Box<dyn Error>> {
+pub fn get_clipboard(dir: &PathBuf) -> Result<ClipboardStorage, Box<dyn Error>> {
     let storage = OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
-        .open(&config.config_dir.join("entries.json"))
+        .open(dir.join("entries.json"))
         .unwrap();
     // TODO: setup key gracefully
     let key: &[u8; 32] = b"Thisisakeyof32bytesThisisakeyof3";
