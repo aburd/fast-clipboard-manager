@@ -1,10 +1,9 @@
-use fast_clipboard::store::{Entry, EntryKind};
 use log::debug;
 use std::default::Default;
 use std::io::Read;
 use std::thread;
 use std::time::Duration;
-use wl_clipboard_rs::paste::{get_contents, ClipboardType, Error, MimeType, Seat};
+use wl_clipboard_rs::paste::{get_contents, ClipboardType, MimeType, Seat};
 
 pub struct Tracker {
     current: Option<Vec<u8>>,

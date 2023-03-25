@@ -1,113 +1,24 @@
+use crate::entry::{EncryptedEntry, Entry, EntryError, EntryKind};
+
 use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-    ChaCha20Poly1305, Nonce,
+    aead::{KeyInit, OsRng},
+    ChaCha20Poly1305,
 };
-use chrono::Utc;
+
 use log::{debug, info};
-use serde::{Deserialize, Serialize};
-use std::error::Error;
-use std::fmt;
-use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, SeekFrom, Write};
-/// Deals with reading/writing clipboard entries to storage (e.g. a File)
-use std::path::PathBuf;
 use thiserror::Error;
+
+/// Deals with reading/writing clipboard entries to storage (e.g. a File)
+use std::{
+    error::Error,
+    fs::{File, OpenOptions},
+    io::{self, Read, Seek, SeekFrom, Write},
+    path::PathBuf,
+};
 
 const DEFAULT_MAX_ENTRIES: usize = 5;
 
 pub type Key = [u8; 32];
-
-#[derive(Error, Debug)]
-pub enum EntryError {
-    #[error("error decoding the entry: {0}")]
-    Decode(String),
-    #[error("error encoding the entry: {0}")]
-    Encode(String),
-    #[error("Could not serialize entry: {0}")]
-    CantSerialize(String),
-    #[error("Invalid operation: {0}")]
-    InvalidOperation(String),
-    #[error("unknown data store error: {0}")]
-    Unknown(String),
-}
-
-impl From<io::Error> for EntryError {
-    fn from(e: io::Error) -> EntryError {
-        EntryError::Unknown(e.to_string())
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
-pub enum EntryKind {
-    Text,
-    Image,
-}
-
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
-pub struct Entry {
-    bytes: Vec<u8>,
-    kind: EntryKind,
-    pub datetime: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
-pub struct EncryptedEntry {
-    ciphertext: Vec<u8>,
-    nonce: Vec<u8>,
-    kind: EntryKind,
-}
-
-impl EncryptedEntry {
-    pub fn try_into_entry(self, key: &Key) -> Result<Entry, EntryError> {
-        let cipher = ChaCha20Poly1305::new(key.into());
-        let nonce = Nonce::clone_from_slice(&self.nonce[0..12]);
-        let plaintext = cipher
-            .decrypt(&nonce, self.ciphertext.as_ref())
-            .map_err(|e| EntryError::Decode(e.to_string()))?;
-        Ok(Entry::new(&plaintext, self.kind))
-    }
-}
-
-impl Entry {
-    pub fn new(bytes: &Vec<u8>, kind: EntryKind) -> Self {
-        let dt = Utc::now();
-        Entry {
-            bytes: bytes.to_owned(),
-            kind,
-            datetime: dt.to_rfc3339(),
-        }
-    }
-
-    pub fn encode(&self, key: &Key) -> Result<EncryptedEntry, EntryError> {
-        let cipher = ChaCha20Poly1305::new(key.into());
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
-        let ciphertext = cipher
-            .encrypt(&nonce, self.bytes.as_ref())
-            .map_err(|e| EntryError::Encode(e.to_string()))?;
-        Ok(EncryptedEntry {
-            ciphertext,
-            nonce: nonce.as_slice().into(),
-            kind: self.kind,
-        })
-    }
-
-    pub fn content(&self) -> &[u8] {
-        &self.bytes
-    }
-}
-
-impl fmt::Display for Entry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.kind {
-            EntryKind::Text => {
-                write!(f, "{}", String::from_utf8(self.bytes.clone()).unwrap())
-            }
-            EntryKind::Image => {
-                write!(f, "[{}] ENTRY[IMAGE]: {:?}", self.datetime, self.bytes)
-            }
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct ClipboardStorage {
@@ -124,6 +35,36 @@ pub fn generate_encryption_key() -> Key {
     ChaCha20Poly1305::generate_key(&mut OsRng).into()
 }
 
+#[derive(Error, Debug)]
+pub enum ClipboardStorageError {
+    #[error("invalid operation on clipboard storage: {0}")]
+    InvalidOperation(String),
+    #[error("error with serialization: {0}")]
+    Serialization(String),
+    #[error("unknown data store error: {0}")]
+    Unknown(String),
+}
+
+impl From<EntryError> for ClipboardStorageError {
+    fn from(value: EntryError) -> Self {
+        match value {
+            EntryError::Decode(s) => {
+                ClipboardStorageError::Serialization(format!("EntryError: {}", s))
+            }
+            EntryError::Encode(s) => {
+                ClipboardStorageError::Serialization(format!("EntryError: {}", s))
+            }
+            EntryError::Unknown(s) => ClipboardStorageError::Unknown(format!("EntryError: {}", s)),
+        }
+    }
+}
+
+impl From<io::Error> for ClipboardStorageError {
+    fn from(e: io::Error) -> Self {
+        ClipboardStorageError::Unknown(e.to_string())
+    }
+}
+
 impl ClipboardStorage {
     pub fn new(storage: File, key: Key) -> Self {
         ClipboardStorage {
@@ -135,7 +76,7 @@ impl ClipboardStorage {
     }
 
     /// Persists current ClipboardStorage to the Writer
-    pub fn save(&mut self) -> Result<(), EntryError> {
+    pub fn save(&mut self) -> Result<(), ClipboardStorageError> {
         let encoded: Result<Vec<EncryptedEntry>, EntryError> = self
             .entries
             .clone()
@@ -143,7 +84,7 @@ impl ClipboardStorage {
             .map(|entry| entry.encode(&self.key))
             .collect();
         let serialized = serde_json::to_string(&encoded.unwrap())
-            .map_err(|e| EntryError::CantSerialize(e.to_string()))?;
+            .map_err(|e| ClipboardStorageError::Serialization(e.to_string()))?;
 
         self.storage.set_len(0)?;
         self.storage.seek(SeekFrom::Start(0))?;
@@ -153,18 +94,18 @@ impl ClipboardStorage {
     }
 
     /// Loads all from Reader into current ClipboardStorage
-    pub fn load(&mut self) -> Result<(), EntryError> {
+    pub fn load(&mut self) -> Result<(), ClipboardStorageError> {
         let mut buf = String::new();
         self.storage.read_to_string(&mut buf)?;
         debug!("load buf: [{}]", buf);
         if buf.is_empty() {
             info!("initializing new empty clipboard");
             buf = serde_json::to_string::<Vec<Entry>>(&self.entries)
-                .map_err(|e| EntryError::Decode(e.to_string()))?;
+                .map_err(|e| ClipboardStorageError::Serialization(e.to_string()))?;
             self.save()?;
         }
         let decoded = serde_json::from_str::<Vec<EncryptedEntry>>(&buf)
-            .map_err(|e| EntryError::Decode(format!("serde: {}", e.to_string())))?;
+            .map_err(|e| ClipboardStorageError::Serialization(e.to_string()))?;
         self.entries = decoded
             .into_iter()
             .map(|encrypted| encrypted.try_into_entry(&self.key))
@@ -188,8 +129,12 @@ impl ClipboardStorage {
     }
 
     /// Clips off any entries at beginning
-    pub fn add_entry(&mut self, entry: Entry) -> Result<(), EntryError> {
-        if let Some(idx) = self.entries.iter().position(|e| e.bytes == entry.bytes) {
+    pub fn add_entry(&mut self, entry: Entry) -> Result<(), ClipboardStorageError> {
+        if let Some(idx) = self
+            .entries
+            .iter()
+            .position(|e| entry.content() == e.content())
+        {
             self.entries.swap(0, idx);
         } else {
             self.entries.insert(0, entry);
@@ -200,9 +145,9 @@ impl ClipboardStorage {
         Ok(())
     }
 
-    pub fn remove_entry(&mut self, idx: usize) -> Result<(), EntryError> {
+    pub fn remove_entry(&mut self, idx: usize) -> Result<(), ClipboardStorageError> {
         if idx >= self.entries.len() {
-            return Err(EntryError::InvalidOperation(format!(
+            return Err(ClipboardStorageError::InvalidOperation(format!(
                 "Cannot remove entry at index: {}",
                 idx
             )));
@@ -253,8 +198,7 @@ mod tests {
         let entry = Entry::new(&bytes, EntryKind::Text);
         let encrypted = entry.encode(KEY).unwrap();
         let decoded = encrypted.try_into_entry(KEY).unwrap();
-        assert_eq!(entry.bytes, decoded.bytes);
-        assert_eq!(entry.kind, decoded.kind);
+        assert_eq!(entry.content(), decoded.content());
     }
 
     #[test]
@@ -306,7 +250,7 @@ mod tests {
         clipboard
             .add_entry(Entry::new(&vec![2], EntryKind::Text))
             .unwrap();
-        assert_eq!(clipboard.entries[0].bytes, vec![2]);
+        assert_eq!(clipboard.entries[0].content(), vec![2]);
     }
 
     #[test]
@@ -320,11 +264,11 @@ mod tests {
         clipboard
             .add_entry(Entry::new(&vec![2], EntryKind::Text))
             .unwrap();
-        assert_eq!(clipboard.entries[0].bytes, vec![2]);
+        assert_eq!(clipboard.entries[0].content(), vec![2]);
         clipboard
             .add_entry(Entry::new(&vec![3], EntryKind::Text))
             .unwrap();
-        assert_eq!(clipboard.entries[0].bytes, vec![3]);
+        assert_eq!(clipboard.entries[0].content(), vec![3]);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 [workspace]
-members = ["fast_clipboard", "fast_clipboard_gui", "fast_clipboard_daemon"]
+members = ["fast_clipboard", "fast_clipboard_gui", "fastclipd"]
 
 [workspace.package]
 authors = ["Aaron Burdick <aaron.burdick@protonmail.com>"]

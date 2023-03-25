@@ -315,16 +315,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fast_clipboard_daemon"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "fast_clipboard",
- "log",
- "wl-clipboard-rs",
-]
-
-[[package]]
 name = "fast_clipboard_gui"
 version = "0.1.0"
 dependencies = [
@@ -337,6 +327,16 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "fastclipd"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "fast_clipboard",
+ "log",
+ "wl-clipboard-rs",
 ]
 
 [[package]]

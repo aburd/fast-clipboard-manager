@@ -1,14 +1,12 @@
-use fast_clipboard::store::{ClipboardStorage, Entry, EntryKind};
-use log::{error, info};
+use fast_clipboard::store::ClipboardStorage;
+use log::info;
 use relm4::gtk;
 use relm4::gtk::gdk;
-use relm4::gtk::gio;
 use relm4::gtk::glib::clone;
 use relm4::gtk::prelude::*;
 use relm4::RelmWidgetExt;
 use relm4::{ComponentParts, ComponentSender, SimpleComponent};
 use std::sync::{Arc, Mutex};
-use std::thread;
 
 #[derive(Debug)]
 pub struct AppError {}
