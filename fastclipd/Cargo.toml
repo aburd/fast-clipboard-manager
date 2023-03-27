@@ -8,6 +8,10 @@ fast_clipboard = { path = "../fast_clipboard" }
 wl-clipboard-rs = "0.7.0"
 env_logger = "0.10.0"
 log = "0.4.17"
+jsonrpsee = { path = "../../../rust/jsonrpsee/jsonrpsee", features = ["server", "http-client", "ws-client", "macros", "client-ws-transport-native-tls"] }
+anyhow = "1.0.70"
+tokio = { version = "1.26.0", features = ["full"] }
+futures = "0.3.27"
 
 [[bin]]
 name = "daemon"
