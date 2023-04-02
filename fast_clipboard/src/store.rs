@@ -6,6 +6,7 @@ use chacha20poly1305::{
 };
 
 use log::{debug, info};
+use temp_file::TempFile;
 use thiserror::Error;
 
 /// Deals with reading/writing clipboard entries to storage (e.g. a File)
@@ -29,6 +30,19 @@ pub struct ClipboardStorage {
     /// A new copy will always force the oldest from the clipboard
     max_entries: usize,
     key: Key,
+}
+
+impl Default for ClipboardStorage {
+    fn default() -> Self {
+        let tmp = temp_file::empty();
+        let f = File::open(tmp.path()).unwrap();
+        Self {
+            storage: f,
+            entries: vec![],
+            max_entries: DEFAULT_MAX_ENTRIES,
+            key: Key::default(),
+        }
+    }
 }
 
 pub fn generate_encryption_key() -> Key {

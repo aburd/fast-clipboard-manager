@@ -14,6 +14,7 @@ thiserror = "1.0.38"
 fast_clipboard = { path = "../fast_clipboard" }
 relm4 = "0.5.1"
 relm4-components = "0.5.1"
+jsonrpsee = { version = "0.16.2", features = ["ws-client", "macros"] }
 
 [[bin]]
 name = "gui"

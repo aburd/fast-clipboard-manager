@@ -1,7 +1,7 @@
 mod server;
 mod tracker;
 
-use log::{error, info};
+use log::{debug, info};
 use tokio::sync::broadcast;
 use tracker::Tracker;
 
@@ -21,7 +21,12 @@ async fn main() {
         }
     });
 
-    let clip_mod = server::clip_module(tx).await;
+    let home_path = home::home_dir().unwrap();
+    let dir_path = home_path.join(".config/fast_clipboard_manager");
+    let config = fast_clipboard::config::get_config(&dir_path)
+        .expect("Could not retrieve configuration file");
+    let store = fast_clipboard::store::get_clipboard(&dir_path).unwrap();
+    let clip_mod = server::clip_module(config, store, tx).await;
 
     info!("Fastclipd server starting");
     let (_addr, handle) = server::run_server(clip_mod).await.unwrap();

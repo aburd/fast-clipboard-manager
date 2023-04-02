@@ -1,4 +1,4 @@
-use crate::tracker::TrackerSender;
+use fast_clipboard::{config::ConfigFile, store::ClipboardStorage};
 
 use std::net::SocketAddr;
 
@@ -7,34 +7,50 @@ use jsonrpsee::{
     SubscriptionMessage,
 };
 
-use log::info;
+use log::{debug, info};
 use tokio::sync::broadcast::Sender;
 
 const DEFAULT_PORT: u64 = 22766;
 
-pub async fn clip_module(tx: Sender<Vec<u8>>) -> RpcModule<TrackerSender> {
-    let mut module = RpcModule::new(tx.clone());
+pub struct FastclipdContext {
+    pub config: ConfigFile,
+    pub store: ClipboardStorage,
+    pub tx: Sender<Vec<u8>>,
+}
+
+pub async fn clip_module(
+    config: ConfigFile,
+    store: ClipboardStorage,
+    tx: Sender<Vec<u8>>,
+) -> RpcModule<FastclipdContext> {
+    let ctx = FastclipdContext { config, store, tx };
+    let mut module = RpcModule::new(ctx);
+
     module
-        .register_method("ping", |a, b| {
+        .register_method("ping", |_, _| {
             info!("SERVER: ping");
             Ok("pong".to_string())
         })
         .unwrap();
+
     module
-        .register_method("get_entries", |a, b| {
+        .register_method("get_entries", |_, ctx| {
             info!("SERVER: get_entries");
-            Ok("Hello world")
+            let entries = ctx.store.list_entries();
+            let s = serde_json::to_string(entries).unwrap();
+            Ok(s)
         })
         .unwrap();
+
     module
         .register_subscription(
             "subscribe_entry",
             "s_entry",
             "unsubscribe_entry",
-            |_, pending, tx| async move {
-                let mut rx = tx.subscribe();
-                let res = rx.recv().await?;
-                let sink = pending.accept().await?;
+            |_, pending, ctx| async move {
+                let mut rx = ctx.tx.subscribe();
+                let sink = pending.accept().await.unwrap();
+                let res = rx.recv().await.unwrap();
                 let msg = SubscriptionMessage::from_json(&res).unwrap();
                 sink.send(msg).await.unwrap();
                 Ok(())
@@ -46,7 +62,7 @@ pub async fn clip_module(tx: Sender<Vec<u8>>) -> RpcModule<TrackerSender> {
 }
 
 pub async fn run_server(
-    clip_mod: RpcModule<TrackerSender>,
+    clip_mod: RpcModule<FastclipdContext>,
 ) -> anyhow::Result<(SocketAddr, ServerHandle)> {
     let ws_addr = default_addr();
     let server = ServerBuilder::new().build(ws_addr).await?;
@@ -63,7 +79,15 @@ fn default_addr() -> String {
 
 #[cfg(test)]
 mod test {
-    use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
+    use std::path::PathBuf;
+
+    use futures::StreamExt;
+    use jsonrpsee::{
+        core::client::{ClientT, Subscription, SubscriptionClientT},
+        rpc_params,
+        ws_client::WsClientBuilder,
+    };
+    use log::debug;
     use tokio::sync::broadcast;
 
     use super::*;
@@ -71,7 +95,10 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_server_can_run() {
         let (tx, _rx) = broadcast::channel::<Vec<u8>>(16);
-        let clip_mod = clip_module(tx).await;
+        let config = ConfigFile::default();
+        let store = ClipboardStorage::default();
+
+        let clip_mod = clip_module(config, store, tx).await;
         let (addr, handle) = run_server(clip_mod).await.unwrap();
         let client = WsClientBuilder::default()
             .build(format!("ws://{}", &addr))
@@ -79,6 +106,50 @@ mod test {
             .unwrap();
         let response: String = client.request("ping", rpc_params![]).await.unwrap();
         assert_eq!(response, "pong");
+        handle.stop().unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_can_receive_clipboard_messages() {
+        let (tx, _rx) = broadcast::channel::<Vec<u8>>(16);
+        let config = ConfigFile::default();
+        let store = ClipboardStorage::default();
+
+        let clip_mod = clip_module(config, store, tx.clone()).await;
+        let (addr, handle) = run_server(clip_mod).await.unwrap();
+        let client = WsClientBuilder::default()
+            .build(format!("ws://{}", &addr))
+            .await
+            .unwrap();
+        let sub: Subscription<Vec<u8>> = client
+            .subscribe("subscribe_entry", rpc_params![], "unsubscribe_entry")
+            .await
+            .unwrap();
+
+        tx.send("Something copied".as_bytes().to_vec()).unwrap();
+        sub.take(1)
+            .for_each(|res| async move {
+                debug!("res: {:?}", res);
+                assert!(res.is_ok());
+            })
+            .await;
+        handle.stop().unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_can_get_entries() {
+        let (tx, _rx) = broadcast::channel::<Vec<u8>>(16);
+        let config = ConfigFile::default();
+        let store = ClipboardStorage::default();
+
+        let clip_mod = clip_module(config, store, tx).await;
+        let (addr, handle) = run_server(clip_mod).await.unwrap();
+        let client = WsClientBuilder::default()
+            .build(format!("ws://{}", &addr))
+            .await
+            .unwrap();
+        let response: String = client.request("get_entries", rpc_params![]).await.unwrap();
+        assert_eq!(response, "[]");
         handle.stop().unwrap();
     }
 }

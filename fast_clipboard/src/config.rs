@@ -19,6 +19,15 @@ pub struct ConfigFile {
     pub config: Config,
 }
 
+impl Default for ConfigFile {
+    fn default() -> Self {
+        Self {
+            path: PathBuf::new(),
+            config: Config::default(),
+        }
+    }
+}
+
 impl ConfigFile {
     pub fn new(path: &PathBuf) -> Self {
         ConfigFile {
@@ -104,9 +113,7 @@ impl Default for Config {
     }
 }
 
-pub fn get_config() -> anyhow::Result<ConfigFile> {
-    let home_path = home::home_dir().unwrap();
-    let dir_path = home_path.join(".config/fast_clipboard_manager");
+pub fn get_config(dir_path: &PathBuf) -> anyhow::Result<ConfigFile> {
     let default_path = dir_path.join(&CONFIG_FILE_NAME);
     let mut config_file = ConfigFile::new(&default_path);
     config_file.load()?;
