@@ -73,14 +73,12 @@ pub async fn run_server(
     Ok((addr, handle))
 }
 
-fn default_addr() -> String {
+pub fn default_addr() -> String {
     format!("127.0.0.1:{}", DEFAULT_PORT)
 }
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
-
     use futures::StreamExt;
     use jsonrpsee::{
         core::client::{ClientT, Subscription, SubscriptionClientT},

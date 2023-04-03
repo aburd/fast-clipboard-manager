@@ -1,26 +1,25 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
+mod components;
 mod gui;
+mod ws_client;
 
-use fast_clipboard::config;
-use fast_clipboard::store;
-use gui::FCAppModel;
-use log::debug;
-use relm4::RelmApp;
-use std::sync::{Arc, Mutex};
+use gui::AppErr;
+use jsonrpsee::core::client::Client;
+use log::{debug, error, info};
 
-const APPLICATION_ID: &str = "com.github.aburd.fast-clipboard-manager";
-
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
-    debug!("logger initiated");
+    info!("logger initiated");
 
-    let config_file = config::get_config().unwrap();
-    let clipboard = Arc::new(Mutex::new(store::get_clipboard(&config_file.path).unwrap()));
-    debug!("config and clipboard loaded");
+    info!("connecting to faclipdd");
+    let client_res: anyhow::Result<Client, AppErr> = ws_client::connect().await.map_err(|e| {
+        error!("connection to fastclipd failed: {}", e);
+        AppErr::CantConnectToDaemon(e.to_string())
+    });
 
-    debug!("starting app");
-    let app = RelmApp::new(APPLICATION_ID);
-    app.run::<FCAppModel>(clipboard);
+    info!("starting app");
+    gui::run_app(client_res).await;
     debug!("app exited");
 }

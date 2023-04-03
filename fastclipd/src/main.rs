@@ -14,9 +14,9 @@ async fn main() {
     info!("Starting fastclipd");
     tokio::spawn(async move {
         loop {
-            info!("Starting tracker");
             let tracker = Tracker::new();
             let s = tracker.await;
+            debug!("Sending bytes from tracker: {:?}", s);
             tracker_tx.send(s).unwrap();
         }
     });
